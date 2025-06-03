@@ -228,24 +228,32 @@
 
     function interpretGameBlock(game) {
         if (!game) return null;
-        // Sélectionne toutes les cases du nouveau format
         const squares = game.querySelectorAll('.square');
-        const areaBlockMatrix = Array(9).fill().map(() => Array(9).fill(0));
+        let maxRow = 0, maxCol = 0;
+
+        // Trouver la taille max
+        squares.forEach(square => {
+            const [rowStr, colStr] = square.id.split('_');
+            const row = parseInt(rowStr, 10);
+            const col = parseInt(colStr, 10);
+            if (row > maxRow) maxRow = row;
+            if (col > maxCol) maxCol = col;
+        });
+
+        // Créer la matrice à la bonne taille
+        const areaBlockMatrix = Array(maxRow).fill().map(() => Array(maxCol).fill(0));
 
         squares.forEach(square => {
-            // id du type '1_1', '2_3', etc.
             const [rowStr, colStr] = square.id.split('_');
-            const row = parseInt(rowStr, 10) - 1; // index 0-based
+            const row = parseInt(rowStr, 10) - 1;
             const col = parseInt(colStr, 10) - 1;
-
-            if (row < 0 || row > 8 || col < 0 || col > 8) return;
+            if (row < 0 || row >= maxRow || col < 0 || col >= maxCol) return;
 
             if (square.classList.contains('bombflagged')) {
                 areaBlockMatrix[row][col] = 'X';
             } else if (square.classList.contains('blank')) {
                 areaBlockMatrix[row][col] = -1;
             } else {
-                // Cherche open0, open1, ... open8
                 for (let k = 0; k <= 8; k++) {
                     if (square.classList.contains(`open${k}`)) {
                         areaBlockMatrix[row][col] = k;
@@ -254,30 +262,25 @@
                 }
             }
         });
-        console.log(areaBlockMatrix);
         return areaBlockMatrix;
     }
 
     function countHiddenAround(areaBlockMatrix, i, j) {
-        if (!areaBlockMatrix || i < 1 || j < 1 || i >= 10 || j >= 10) {
+        if (!areaBlockMatrix || i < 0 || j < 0 || i >= areaBlockMatrix.length || j >= areaBlockMatrix[0].length) {
             return { hiddenCount: 0, minesCount: 0 };
         }
-
+        const height = areaBlockMatrix.length;
+        const width = areaBlockMatrix[0].length;
         let hiddenCount = 0;
         let minesCount = 0;
-
         for (let k = -1; k <= 1; k++) {
             for (let l = -1; l <= 1; l++) {
                 const newI = i + k;
                 const newJ = j + l;
-                
-                if (newI < 1 || newI >= 10 || newJ < 1 || newJ >= 10) {
-                    continue;
-                }
-
-                if (areaBlockMatrix[newI - 1][newJ - 1] === -1) {
+                if (newI < 0 || newI >= height || newJ < 0 || newJ >= width) continue;
+                if (areaBlockMatrix[newI][newJ] === -1) {
                     hiddenCount++;
-                } else if (areaBlockMatrix[newI - 1][newJ - 1] === 'X') {
+                } else if (areaBlockMatrix[newI][newJ] === 'X') {
                     minesCount++;
                 }
             }
@@ -286,19 +289,20 @@
     }
 
     function clickCellsAround(areaBlockMatrix, i, j, flag) {
-        if (!areaBlockMatrix || i < 1 || j < 1 || i >= 10 || j >= 10) return;
-
+        if (!areaBlockMatrix || i < 0 || j < 0 || i >= areaBlockMatrix.length || j >= areaBlockMatrix[0].length) return;
+        const height = areaBlockMatrix.length;
+        const width = areaBlockMatrix[0].length;
         for (let k = -1; k <= 1; k++) {
             for (let l = -1; l <= 1; l++) {
                 const newI = i + k;
                 const newJ = j + l;
-                if (newI >= 1 && newI < 10 && newJ >= 1 && newJ < 10) {
-                    if (areaBlockMatrix[newI - 1][newJ - 1] === -1) {
+                if (newI >= 0 && newI < height && newJ >= 0 && newJ < width) {
+                    if (areaBlockMatrix[newI][newJ] === -1) {
                         // ids sont du type 'ligne_colonne', index 1-based
                         const cell = document.getElementById(`${newI+1}_${newJ+1}`);
                         if (cell) {
                             dispatchClick(cell, flag ? 2 : 0);
-                            console.log(`clicked cell ${newI+1}_${newJ+1}`);
+                            console.log(`${flag ? 'flagged' : 'opened'} cell ${newI+1}_${newJ+1} `);
                         }
                     }
                 }
@@ -306,44 +310,213 @@
         }
     }
 
-    function solveAreaBlock(areaBlockMatrix) {
+    async function solveAreaBlock(areaBlockMatrix) {
         if (!areaBlockMatrix) return;
-
+        const height = areaBlockMatrix.length;
+        const width = areaBlockMatrix[0].length;
         let changed = true;
         let count = 0;
-        while (changed && count < 3) {
+        while (changed || count < 10) {
             changed = false;
+            // 0. Check if there is only closed cells
+            let onlyClosedCells = true;
+            for (let i = 0; i < height; i++) {
+                for (let j = 0; j < width; j++) {
+                    if (areaBlockMatrix[i][j] !== -1) {
+                        onlyClosedCells = false;
+                    }
+                }
+            }
+            if (onlyClosedCells) {
+                // click randomly a closed cell
+                const closedCells = [];
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] === -1) {
+                            closedCells.push([i, j]);
+                        }
+                    }
+                }
+                if (closedCells.length > 0) {
+                    const [randomI, randomJ] = closedCells[Math.floor(Math.random() * closedCells.length)];
+                    const cell = document.getElementById(`${randomI + 1}_${randomJ + 1}`);
+                    if (cell) {
+                        dispatchClick(cell, 0);
+                    }
+                    areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
+                    changed = true;
+                }
+            }
             // 1. Click safe cells if all mines are already flagged
-            for (let i = 1; i < 10; i++) {
-                for (let j = 1; j < 10; j++) {
-                    if (areaBlockMatrix[i - 1][j - 1] > 0) {
+            for (let i = 0; i < height; i++) {
+                for (let j = 0; j < width; j++) {
+                    if (areaBlockMatrix[i][j] > 0) {
                         const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                        console.log(`areaBlockMatrix[${i - 1}][${j - 1}] = ${areaBlockMatrix[i - 1][j - 1]} coordinates: ${i}, ${j}`);
-                        console.log(`hiddenCount: ${hiddenCount}, minesCount: ${minesCount}`);
-                        if (areaBlockMatrix[i - 1][j - 1] === minesCount && hiddenCount > 0) {
+                        if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
                             clickCellsAround(areaBlockMatrix, i, j, false);
+                            areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
                             changed = true;
                         }
                     }
                 }
             }
             // 2. Flag mines if all hidden cells must be mines
-            for (let i = 1; i < 10; i++) {
-                for (let j = 1; j < 10; j++) {
-                    if (areaBlockMatrix[i - 1][j - 1] > 0) {
+            for (let i = 0; i < height; i++) {
+                for (let j = 0; j < width; j++) {
+                    if (areaBlockMatrix[i][j] > 0) {
                         const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-
-                        if (areaBlockMatrix[i - 1][j - 1] === hiddenCount + minesCount && hiddenCount > 0) {
+                        if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
                             clickCellsAround(areaBlockMatrix, i, j, true);
+                            areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
                             changed = true;
                         }
                     }
                 }
             }
+
+            // 3. If No change, use probability-based approach
+            if (!changed) {
+                count++;
+            }
+            if (count > 5) {
+                count = 0;
+                // Calculate probabilities for each hidden cell
+                const probabilities = calculateProbabilities(areaBlockMatrix);
+                
+                if (probabilities.length > 0) {
+                    // Sort by probability (lowest first)
+                    probabilities.sort((a, b) => a.probability - b.probability);
+                    
+                    // Click the cell with the lowest probability of being a mine
+                    const bestMove = probabilities[0];
+                    console.log(`Probability-based move: ${bestMove.i+1}_${bestMove.j+1} (${bestMove.probability.toFixed(3)})`);
+                    
+                    const cell = document.getElementById(`${bestMove.i + 1}_${bestMove.j + 1}`);
+                    if (cell) {
+                        dispatchClick(cell, 0);
+                        areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
+                        changed = true;
+                    }
+                } else {
+                    // Fallback to random selection if no probabilities could be calculated
+                    const closedCells = [];
+                    for (let i = 0; i < height; i++) {
+                        for (let j = 0; j < width; j++) {
+                            if (areaBlockMatrix[i][j] === -1) {
+                                closedCells.push([i, j]);
+                            }
+                        }
+                    }
+                    if (closedCells.length > 0) {
+                        const [randomI, randomJ] = closedCells[Math.floor(Math.random() * closedCells.length)];
+                        console.log(`Random fallback move: ${randomI+1}_${randomJ+1}`);
+                        const cell = document.getElementById(`${randomI + 1}_${randomJ + 1}`);
+                        if (cell) {
+                            dispatchClick(cell, 0);
+                            areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
+                            changed = true;
+                        }
+                    }
+                }
+            }
+
             // Re-interpret the board after each round
             areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
             count++;
+
+            await new Promise(resolve => setTimeout(resolve, 1));
         }
+    }
+
+    // Calculate probabilities of each hidden cell containing a mine
+    function calculateProbabilities(areaBlockMatrix) {
+        if (!areaBlockMatrix) return [];
+        const height = areaBlockMatrix.length;
+        const width = areaBlockMatrix[0].length;
+        
+        // Track probability estimates for each hidden cell
+        const probabilities = [];
+        const cellProbabilityMap = new Map(); // Map to track total probability and count for each cell
+        
+        // For each numbered cell
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                // Only consider numbered cells (1-8)
+                if (areaBlockMatrix[i][j] > 0) {
+                    const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                    
+                    // If there are hidden cells and mines to find
+                    if (hiddenCount > 0 && areaBlockMatrix[i][j] - minesCount > 0) {
+                        // Calculate probability for this group of cells
+                        const probability = (areaBlockMatrix[i][j] - minesCount) / hiddenCount;
+                        
+                        // Assign this probability to each hidden cell around
+                        for (let k = -1; k <= 1; k++) {
+                            for (let l = -1; l <= 1; l++) {
+                                const newI = i + k;
+                                const newJ = j + l;
+                                
+                                if (newI >= 0 && newI < height && newJ >= 0 && newJ < width && 
+                                    areaBlockMatrix[newI][newJ] === -1) {
+                                    
+                                    const cellKey = `${newI},${newJ}`;
+                                    if (!cellProbabilityMap.has(cellKey)) {
+                                        cellProbabilityMap.set(cellKey, { total: 0, count: 0 });
+                                    }
+                                    
+                                    const cellData = cellProbabilityMap.get(cellKey);
+                                    cellData.total += probability;
+                                    cellData.count += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Convert the map to array of probability objects
+        cellProbabilityMap.forEach((data, key) => {
+            const [i, j] = key.split(',').map(Number);
+            const avgProbability = data.total / data.count;
+            probabilities.push({ i, j, probability: avgProbability });
+        });
+        
+        // Add border cells with a higher probability
+        // These are typically more dangerous as we have less information about them
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                if (areaBlockMatrix[i][j] === -1) {
+                    const cellKey = `${i},${j}`;
+                    if (!cellProbabilityMap.has(cellKey)) {
+                        // Check if this is a cell without any adjacent numbered cells
+                        // These are typically more risky, so assign higher probability
+                        let hasAdjacentNumber = false;
+                        for (let k = -1; k <= 1; k++) {
+                            for (let l = -1; l <= 1; l++) {
+                                const newI = i + k;
+                                const newJ = j + l;
+                                if (newI >= 0 && newI < height && newJ >= 0 && newJ < width && 
+                                    areaBlockMatrix[newI][newJ] > 0) {
+                                    hasAdjacentNumber = true;
+                                    break;
+                                }
+                            }
+                            if (hasAdjacentNumber) break;
+                        }
+                        
+                        // Add to probabilities with a higher value if it's an isolated cell
+                        probabilities.push({ 
+                            i, 
+                            j, 
+                            probability: hasAdjacentNumber ? 0.5 : 0.8 // Isolated cells are more risky
+                        });
+                    }
+                }
+            }
+        }
+        
+        return probabilities;
     }
 
     // Initialize interface when DOM is ready
