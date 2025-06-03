@@ -11,26 +11,26 @@
 
 // Do Not Touch This Structure
 //  <div id="AreaBlock" class="pull-left">
-//    <div id="cell_0_0" class="cell size24 hdd_closed" data-x="0" data-y="0"></div>
-//    <div id="cell_1_0" class="cell size24 hdd_closed" data-x="1" data-y="0"></div>
-//    <div id="cell_2_0" class="cell size24 hdd_closed hdd_flag" data-x="2" data-y="0"></div>
-//    <div id="cell_3_0" class="cell size24 hdd_closed hdd_flag" data-x="3" data-y="0"></div>
-//    <div id="cell_4_0" class="cell size24 hdd_opened hdd_type1" data-x="4" data-y="0"></div>
-//    <div id="cell_5_0" class="cell size24 hdd_opened hdd_type0" data-x="5" data-y="0"></div>
-//    <div id="cell_6_0" class="cell size24 hdd_opened hdd_type0" data-x="6" data-y="0"></div>
-//    <div id="cell_7_0" class="cell size24 hdd_opened hdd_type0" data-x="7" data-y="0"></div>
-//    <div id="cell_8_0" class="cell size24 hdd_opened hdd_type0" data-x="8" data-y="0"></div>
+//    <div id="cell_0_0" class="cell size24 hdn_closed" data-x="0" data-y="0"></div>
+//    <div id="cell_1_0" class="cell size24 hdn_closed" data-x="1" data-y="0"></div>
+//    <div id="cell_2_0" class="cell size24 hdn_closed hdn_flag" data-x="2" data-y="0"></div>
+//    <div id="cell_3_0" class="cell size24 hdn_closed hdn_flag" data-x="3" data-y="0"></div>
+//    <div id="cell_4_0" class="cell size24 hdn_opened hdn_type1" data-x="4" data-y="0"></div>
+//    <div id="cell_5_0" class="cell size24 hdn_opened hdn_type0" data-x="5" data-y="0"></div>
+//    <div id="cell_6_0" class="cell size24 hdn_opened hdn_type0" data-x="6" data-y="0"></div>
+//    <div id="cell_7_0" class="cell size24 hdn_opened hdn_type0" data-x="7" data-y="0"></div>
+//    <div id="cell_8_0" class="cell size24 hdn_opened hdn_type0" data-x="8" data-y="0"></div>
 //    <div class="clear"></div>
 
-//    <div id="cell_0_1" class="cell size24 hdd_opened hdd_type2" data-x="0" data-y="1"></div>
-//    <div id="cell_1_1" class="cell size24 hdd_opened hdd_type2" data-x="1" data-y="1"></div>
-//    <div id="cell_2_1" class="cell size24 hdd_opened hdd_type2" data-x="2" data-y="1"></div>
-//    <div id="cell_3_1" class="cell size24 hdd_opened hdd_type1" data-x="3" data-y="1"></div>
-//    <div id="cell_4_1" class="cell size24 hdd_opened hdd_type1" data-x="4" data-y="1"></div>
-//    <div id="cell_5_1" class="cell size24 hdd_opened hdd_type0" data-x="5" data-y="1"></div>
-//    <div id="cell_6_1" class="cell size24 hdd_opened hdd_type0" data-x="6" data-y="1"></div>
-//    <div id="cell_7_1" class="cell size24 hdd_opened hdd_type0" data-x="7" data-y="1"></div>
-//    <div id="cell_8_1" class="cell size24 hdd_opened hdd_type0" data-x="8" data-y="1"></div>
+//    <div id="cell_0_1" class="cell size24 hdn_opened hdn_type2" data-x="0" data-y="1"></div>
+//    <div id="cell_1_1" class="cell size24 hdn_opened hdn_type2" data-x="1" data-y="1"></div>
+//    <div id="cell_2_1" class="cell size24 hdn_opened hdn_type2" data-x="2" data-y="1"></div>
+//    <div id="cell_3_1" class="cell size24 hdn_opened hdn_type1" data-x="3" data-y="1"></div>
+//    <div id="cell_4_1" class="cell size24 hdn_opened hdn_type1" data-x="4" data-y="1"></div>
+//    <div id="cell_5_1" class="cell size24 hdn_opened hdn_type0" data-x="5" data-y="1"></div>
+//    <div id="cell_6_1" class="cell size24 hdn_opened hdn_type0" data-x="6" data-y="1"></div>
+//    <div id="cell_7_1" class="cell size24 hdn_opened hdn_type0" data-x="7" data-y="1"></div>
+//    <div id="cell_8_1" class="cell size24 hdn_opened hdn_type0" data-x="8" data-y="1"></div>
 //    <div class="clear"></div>
 //    ...
 //  </div>
@@ -132,23 +132,38 @@
         if (!areaBlock) return null;
 
         const cells = areaBlock.querySelectorAll('.cell');
-        const cellsArray = Array.from(cells);
-        const areaBlockMatrix = Array(9).fill().map(() => Array(9).fill(0));
+        let maxRow = 0, maxCol = 0;
 
-        for (let i = 0; i < 9; i++) {
-            for (let j = 0; j < 9; j++) {
-                const cell = cellsArray[i * 9 + j];
+        cells.forEach(cell => {
+            const [cellStr, rowStr, colStr] = cell.id.split('_');
+            const row = parseInt(rowStr, 10);
+            const col = parseInt(colStr, 10);
+            if (row > maxRow) maxRow = row;
+            if (col > maxCol) maxCol = col;
+        });
+
+        maxRow++;
+        maxCol++;
+
+        const cellsArray = Array.from(cells);
+        const areaBlockMatrix = Array(maxRow).fill().map(() => Array(maxCol).fill(0));
+
+        for (let i = 0; i < maxRow; i++) {
+            for (let j = 0; j < maxCol; j++) {
+                console.log(`i = ${i}, j = ${j}`);
+                const cell = cellsArray[i * maxCol + j];
                 if (!cell) continue;
 
-                if (cell.classList.contains('hdd_closed')) {
-                    if (cell.classList.contains('hdd_flag')) {
+                console.log(cell.classList);
+                if (cell.classList.contains('hdn_closed')) {
+                    if (cell.classList.contains('hdn_flag')) {
                         areaBlockMatrix[i][j] = 'X';
                     } else {
                         areaBlockMatrix[i][j] = -1;
                     }
-                } else if (cell.classList.contains('hdd_opened')) {
-                    for (let k = 0; k < 9; k++) {
-                        if (cell.classList.contains(`hdd_type${k}`)) {
+                } else if (cell.classList.contains('hdn_opened')) {
+                    for (let k = 0; k < maxCol; k++) {
+                        if (cell.classList.contains(`hdn_type${k}`)) {
                             areaBlockMatrix[i][j] = k;
                             break;
                         }
@@ -210,10 +225,20 @@
         const height = areaBlockMatrix.length;
         const width = areaBlockMatrix[0].length;
         let count = 0;
-        let changed
         while (true) {
-            const areaBlockMatrix_Previous = interpretAreaBlock(document.getElementById('AreaBlock'));
 
+            // 0. Double check and remove the added style for opened cells
+            for (let i = 0; i < height; i++) {
+                for (let j = 0; j < width; j++) {
+                    if (areaBlockMatrix[i][j] !== -1) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell) {
+                            cell.style.backgroundColor = '';
+                            cell.style.border = '';
+                        }
+                    }
+                }
+            }
             // 1. Click safe cells if all mines are already flagged
             for (let i = 0; i < height; i++) {
                 for (let j = 0; j < width; j++) {
@@ -243,10 +268,6 @@
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
             count++;
-
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
 
             await new Promise(resolve => setTimeout(resolve, 10));
         }
