@@ -171,8 +171,8 @@
                 <button id="intermediaire"> Go Intermediaire </button>
                 <button id="expert"> Go Expert </button>
                 <button id="areaBlock"> Area Block </button>
-                <button id="flag"> Flag 0_0</button>
-                <button id="open"> Open 0_1</button>
+                <button id="flag"> Flag 1_1</button>
+                <button id="open"> Open 1_2</button>
                 <button id="solve"> Solve </button>
             </div>
         `;
@@ -226,11 +226,6 @@
         });
     }
 
-    function interpretAreaBlock(areaBlock) {
-        // Old function, replaced by interpretGameBlock
-        return null;
-    }
-
     function interpretGameBlock(game) {
         if (!game) return null;
         // Sélectionne toutes les cases du nouveau format
@@ -245,14 +240,14 @@
             if (row < 0 || row > 8 || col < 0 || col > 8) return;
 
             if (square.classList.contains('bombflagged')) {
-                areaBlockMatrix[row][col] = 'X';
+                areaBlockMatrix[row - 1][col - 1] = 'X';
             } else if (square.classList.contains('blank')) {
-                areaBlockMatrix[row][col] = -1;
+                areaBlockMatrix[row - 1][col - 1] = -1;
             } else {
                 // Cherche open0, open1, ... open8
                 for (let k = 0; k <= 8; k++) {
                     if (square.classList.contains(`open${k}`)) {
-                        areaBlockMatrix[row][col] = k;
+                        areaBlockMatrix[row - 1][col - 1] = k;
                         break;
                     }
                 }
@@ -263,7 +258,7 @@
     }
 
     function countHiddenAround(areaBlockMatrix, i, j) {
-        if (!areaBlockMatrix || i < 0 || j < 0 || i >= 9 || j >= 9) {
+        if (!areaBlockMatrix || i < 1 || j < 1 || i >= 10 || j >= 10) {
             return { hiddenCount: 0, minesCount: 0 };
         }
 
@@ -275,12 +270,14 @@
                 const newI = i + k;
                 const newJ = j + l;
                 
-                if (newI >= 0 && newI < 9 && newJ >= 0 && newJ < 9) {
-                    if (areaBlockMatrix[newI][newJ] === -1) {
-                        hiddenCount++;
-                    } else if (areaBlockMatrix[newI][newJ] === 'X') {
-                        minesCount++;
-                    }
+                if (newI < 1 || newI >= 10 || newJ < 1 || newJ >= 10) {
+                    continue;
+                }
+
+                if (areaBlockMatrix[newI - 1][newJ - 1] === -1) {
+                    hiddenCount++;
+                } else if (areaBlockMatrix[newI - 1][newJ - 1] === 'X') {
+                    minesCount++;
                 }
             }
         }
@@ -288,14 +285,14 @@
     }
 
     function clickCellsAround(areaBlockMatrix, i, j, flag) {
-        if (!areaBlockMatrix || i < 0 || j < 0 || i >= 9 || j >= 9) return;
+        if (!areaBlockMatrix || i < 1 || j < 1 || i >= 10 || j >= 10) return;
 
         for (let k = -1; k <= 1; k++) {
             for (let l = -1; l <= 1; l++) {
                 const newI = i + k;
                 const newJ = j + l;
-                if (newI >= 0 && newI < 9 && newJ >= 0 && newJ < 9) {
-                    if (areaBlockMatrix[newI][newJ] === -1) {
+                if (newI >= 1 && newI < 10 && newJ >= 1 && newJ < 10) {
+                    if (areaBlockMatrix[newI - 1][newJ - 1] === -1) {
                         // ids sont du type 'ligne_colonne', index 1-based
                         const cell = document.getElementById(`${newI+1}_${newJ+1}`);
                         if (cell) {
@@ -312,16 +309,17 @@
         if (!areaBlockMatrix) return;
 
         let changed = true;
-        while (changed) {
+        let count = 0;
+        while (changed && count < 3) {
             changed = false;
             // 1. Click safe cells if all mines are already flagged
-            for (let i = 0; i < 9; i++) {
-                for (let j = 0; j < 9; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
+            for (let i = 1; i < 10; i++) {
+                for (let j = 1; j < 10; j++) {
+                    if (areaBlockMatrix[i - 1][j - 1] > 0) {
                         const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                        console.log(`areaBlockMatrix[${i}][${j}] = ${areaBlockMatrix[i][j]} coordinates: ${i}, ${j}`);
+                        console.log(`areaBlockMatrix[${i - 1}][${j - 1}] = ${areaBlockMatrix[i - 1][j - 1]} coordinates: ${i}, ${j}`);
                         console.log(`hiddenCount: ${hiddenCount}, minesCount: ${minesCount}`);
-                        if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
+                        if (areaBlockMatrix[i - 1][j - 1] === minesCount && hiddenCount > 0) {
                             clickCellsAround(areaBlockMatrix, i, j, false);
                             changed = true;
                         }
@@ -329,18 +327,21 @@
                 }
             }
             // 2. Flag mines if all hidden cells must be mines
-            for (let i = 0; i < 9; i++) {
-                for (let j = 0; j < 9; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
+            for (let i = 1; i < 10; i++) {
+                for (let j = 1; j < 10; j++) {
+                    if (areaBlockMatrix[i - 1][j - 1] > 0) {
                         const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
 
-                        if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
+                        if (areaBlockMatrix[i - 1][j - 1] === hiddenCount + minesCount && hiddenCount > 0) {
                             clickCellsAround(areaBlockMatrix, i, j, true);
                             changed = true;
                         }
                     }
                 }
             }
+            // Re-interpret the board after each round
+            areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
+            count++;
         }
     }
 
