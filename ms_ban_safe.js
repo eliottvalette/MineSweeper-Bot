@@ -135,7 +135,7 @@
         let maxRow = 0, maxCol = 0;
 
         cells.forEach(cell => {
-            const [cellStr, rowStr, colStr] = cell.id.split('_');
+            const [cellStr, colStr, rowStr] = cell.id.split('_');
             const row = parseInt(rowStr, 10);
             const col = parseInt(colStr, 10);
             if (row > maxRow) maxRow = row;
@@ -225,6 +225,16 @@
         const height = areaBlockMatrix.length;
         const width = areaBlockMatrix[0].length;
         let count = 0;
+
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                const cell = document.querySelector(`#cell_${j}_${i}`);
+                if (cell) {
+                    cell.style.backgroundColor = '';
+                    cell.style.border = '';
+                }
+            }
+        }
         while (true) {
 
             // 0. Double check and remove the added style for opened cells
@@ -269,7 +279,7 @@
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
             count++;
 
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
     }
 
