@@ -143,23 +143,14 @@
             const cell_0_1 = document.querySelector(`#cell_0_1`);
             console.log(cell_0_0);
             console.log(cell_0_1);
-            if (cell_0_0) {
-                cell_0_0.dispatchEvent(new MouseEvent('contextmenu', {
-                    bubbles: true,
-                    cancelable: true,
-                    button: 2
-                }));
-                // Add test_O in the class of the cell
+            if (cell_0_0) {                 // clic droit (drapeau)
+                simulateMouse(cell_0_0, 2);
                 cell_0_0.classList.add('test_O');
             }
-            if (cell_0_1) {
-                cell_0_1.click();
-                // Add test_1 in the class of the cell
+            if (cell_0_1) {                 // clic gauche (ouverture)
+                simulateMouse(cell_0_1, 0);
                 cell_0_1.classList.add('test_1');
             }
-
-            
-
         });
     }
 
