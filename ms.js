@@ -237,17 +237,18 @@
             const [rowStr, colStr] = square.id.split('_');
             const row = parseInt(rowStr, 10) - 1; // index 0-based
             const col = parseInt(colStr, 10) - 1;
+
             if (row < 0 || row > 8 || col < 0 || col > 8) return;
 
             if (square.classList.contains('bombflagged')) {
-                areaBlockMatrix[row - 1][col - 1] = 'X';
+                areaBlockMatrix[row][col] = 'X';
             } else if (square.classList.contains('blank')) {
-                areaBlockMatrix[row - 1][col - 1] = -1;
+                areaBlockMatrix[row][col] = -1;
             } else {
                 // Cherche open0, open1, ... open8
                 for (let k = 0; k <= 8; k++) {
                     if (square.classList.contains(`open${k}`)) {
-                        areaBlockMatrix[row - 1][col - 1] = k;
+                        areaBlockMatrix[row][col] = k;
                         break;
                     }
                 }
