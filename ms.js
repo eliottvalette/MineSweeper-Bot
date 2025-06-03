@@ -4,14 +4,12 @@
 // @version      2025-06-03
 // @description  Nexus Interface for Minesweeper.online
 // @author       You
-// @match        https://minesweeper.online/fr/
-// @match        https://minesweeper.online/fr/game/*
-// @match        https://minesweeper.online/*
+// @match        *://minesweeperonline.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=minesweeper.online
 // @grant        none
 // ==/UserScript==
 
-// Do Not Touch This Structure
+// Do Not Touch This Structure (Old One)
 //  <div id="AreaBlock" class="pull-left">
 //    <div id="cell_0_0" class="cell size24 hdd_closed" data-x="0" data-y="0"></div>
 //    <div id="cell_1_0" class="cell size24 hdd_closed" data-x="1" data-y="0"></div>
@@ -37,26 +35,96 @@
 //    ...
 //  </div>
 
+// New Structure
+//  <div id="game" 
+     // oncontextmenu="return false;" 
+     // ondrag="return false;" 
+     // ondragstart="return false;" 
+     // style="width: 164px; height: 206px;">
+    // <div class="bordertl"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertr"></div>
+    // <div class="borderlrlong"></div>
+    // <div class="time0" id="mines_hundreds"></div>
+    // <div class="time0" id="mines_tens"></div>
+    // <div class="time8" id="mines_ones"></div>
+    // <div class="facesmile" style="margin-left:14px; margin-right: 14px;" id="face"></div>
+    // <div class="time0" id="seconds_hundreds"></div>
+    // <div class="time1" id="seconds_tens"></div>
+    // <div class="time0" id="seconds_ones"></div>
+    // <div class="borderlrlong"></div>
+    // <div class="borderjointl"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="bordertb"></div>
+    // <div class="borderjointr"></div>
+    // <div class="borderlr"></div>
+    // <div class="square bombflagged" id="1_1"></div>
+    // <div class="square bombflagged" id="1_2"></div>
+    // <div class="square open0" id="1_3"></div>
+    // <div class="square open1" id="1_4"></div>
+    // <div class="square blank" id="1_5"></div>
+    // <div class="square blank" id="1_6"></div>
+    // <div class="square blank" id="1_7"></div>
+    // <div class="square blank" id="1_8"></div>
+    // <div class="square blank" id="1_9"></div>
+    // <div class="borderlr"></div>
+    // <div class="borderlr"></div>
+    // <div class="square blank" id="2_1"></div>
+    // <div class="square open1" id="2_2"></div>
+    // <div class="square open0" id="2_3"></div>
+    // <div class="square open1" id="2_4"></div>
+    // <div class="square blank" id="2_5"></div>
+    // <div class="square blank" id="2_6"></div>
+    // <div class="square blank" id="2_7"></div>
+    // <div class="square blank" id="2_8"></div>
+    // <div class="square blank" id="2_9"></div>
+
 (function() {
     'use strict';
 
-    function simulateMouse(el, button = 0) {
-        const r = el.getBoundingClientRect();
+    // Helper universel (pointer + mouse)
+    function dispatchClick(el, button = 0) {
+        const mask = button === 2 ? 2 : 1; // 1 = gauche, 2 = droit
         const opts = {
             bubbles: true,
             cancelable: true,
-            view: window,
-            button,
-            buttons: button === 2 ? 2 : 1,
-            clientX: r.left + 1,
-            clientY: r.top + 1
+            composed: true,
+            button,          // 0 ou 2
+            buttons: mask,   // état courant des boutons
+            pointerId: 1,
+            pointerType: 'mouse',
+            clientX: 0,
+            clientY: 0
         };
-        el.dispatchEvent(new MouseEvent('mousedown', opts));
-        el.dispatchEvent(new MouseEvent('mouseup',   opts));
+
+        // appui
+        el.dispatchEvent(new PointerEvent('pointerdown', opts));
+        el.dispatchEvent(new MouseEvent  ('mousedown',   opts));
+
+        // relâche
+        el.dispatchEvent(new PointerEvent('pointerup',   opts));
+        el.dispatchEvent(new MouseEvent  ('mouseup',     opts));
+
+        // post-traitement : click ou contextmenu
         if (button === 0) {
-            el.dispatchEvent(new MouseEvent('click', opts));      // ouverture
+            el.dispatchEvent(new MouseEvent('click', opts));
         } else {
-            el.dispatchEvent(new MouseEvent('contextmenu', opts)); // drapeau
+            el.dispatchEvent(new MouseEvent('contextmenu', opts));
         }
     }
 
@@ -103,7 +171,8 @@
                 <button id="intermediaire"> Go Intermediaire </button>
                 <button id="expert"> Go Expert </button>
                 <button id="areaBlock"> Area Block </button>
-                <button id="flag"> Flag </button>
+                <button id="flag"> Flag 0_0</button>
+                <button id="open"> Open 0_1</button>
                 <button id="solve"> Solve </button>
             </div>
         `;
@@ -140,15 +209,18 @@
 
         document.getElementById('flag').addEventListener('click', () => {
             const cell_0_0 = document.querySelector(`#cell_0_0`);
-            const cell_0_1 = document.querySelector(`#cell_0_1`);
             console.log(cell_0_0);
-            console.log(cell_0_1);
-            if (cell_0_0) {                 // clic droit (drapeau)
-                simulateMouse(cell_0_0, 2);
+            if (cell_0_0) {                // drapeau = clic droit
+                dispatchClick(cell_0_0, 2);
                 cell_0_0.classList.add('test_O');
             }
-            if (cell_0_1) {                 // clic gauche (ouverture)
-                simulateMouse(cell_0_1, 0);
+        });
+
+        document.getElementById('open').addEventListener('click', () => {
+            const cell_0_1 = document.querySelector(`#cell_0_1`);
+            console.log(cell_0_1);
+            if (cell_0_1) {
+                dispatchClick(cell_0_1, 0);
                 cell_0_1.classList.add('test_1');
             }
         });
@@ -156,32 +228,31 @@
 
     function interpretAreaBlock(areaBlock) {
         if (!areaBlock) return null;
-        
-        const cells = areaBlock.querySelectorAll('.cell');
-        const cellsArray = Array.from(cells);
+        // Sélectionne toutes les cases du nouveau format
+        const squares = areaBlock.querySelectorAll('.square');
         const areaBlockMatrix = Array(9).fill().map(() => Array(9).fill(0));
-        
-        for (let i = 0; i < 9; i++) {
-            for (let j = 0; j < 9; j++) {
-                const cell = cellsArray[i * 9 + j];
-                if (!cell) continue;
 
-                if (cell.classList.contains('hdd_closed')) {
-                    if (cell.classList.contains('hdd_flag')) {
-                        areaBlockMatrix[i][j] = 'X';
-                    } else {
-                        areaBlockMatrix[i][j] = -1;
-                    }
-                } else if (cell.classList.contains('hdd_opened')) {
-                    for (let k = 0; k < 9; k++) {
-                        if (cell.classList.contains(`hdd_type${k}`)) {
-                            areaBlockMatrix[i][j] = k;
-                            break;
-                        }
+        squares.forEach(square => {
+            // id du type '1_1', '2_3', etc.
+            const [rowStr, colStr] = square.id.split('_');
+            const row = parseInt(rowStr, 10) - 1; // index 0-based
+            const col = parseInt(colStr, 10) - 1;
+            if (row < 0 || row > 8 || col < 0 || col > 8) return;
+
+            if (square.classList.contains('bombflagged')) {
+                areaBlockMatrix[row][col] = 'X';
+            } else if (square.classList.contains('blank')) {
+                areaBlockMatrix[row][col] = -1;
+            } else {
+                // Cherche open0, open1, ... open8
+                for (let k = 0; k <= 8; k++) {
+                    if (square.classList.contains(`open${k}`)) {
+                        areaBlockMatrix[row][col] = k;
+                        break;
                     }
                 }
             }
-        }
+        });
         console.log(areaBlockMatrix);
         return areaBlockMatrix;
     }
@@ -218,22 +289,13 @@
             for (let l = -1; l <= 1; l++) {
                 const newI = i + k;
                 const newJ = j + l;
-                
                 if (newI >= 0 && newI < 9 && newJ >= 0 && newJ < 9) {
-                    console.log(`areaBlockMatrix[${newI}][${newJ}] = ${areaBlockMatrix[newI][newJ]}`);
                     if (areaBlockMatrix[newI][newJ] === -1) {
-                        const cell = document.querySelector(`#cell_${newJ}_${newI}`);
+                        // ids sont du type 'ligne_colonne', index 1-based
+                        const cell = document.getElementById(`${newI+1}_${newJ+1}`);
                         if (cell) {
-                            if (flag) {
-                                cell.dispatchEvent(new MouseEvent('contextmenu', {
-                                    bubbles: true,
-                                    cancelable: true,
-                                    button: 2
-                                }));
-                            } else {
-                                cell.click();
-                            }
-                            console.log(`clicked cell ${newJ}_${newI}`);
+                            dispatchClick(cell, flag ? 2 : 0);
+                            console.log(`clicked cell ${newI+1}_${newJ+1}`);
                         }
                     }
                 }
