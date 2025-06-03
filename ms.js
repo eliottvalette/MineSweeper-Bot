@@ -195,41 +195,46 @@
         });
 
         document.getElementById('areaBlock').addEventListener('click', () => {
-            const areaBlock = document.getElementById('AreaBlock');
-            if (areaBlock) interpretAreaBlock(areaBlock);
+            const game = document.getElementById('game');
+            if (game) interpretGameBlock(game);
         });
 
         document.getElementById('solve').addEventListener('click', () => {
-            const areaBlock = document.getElementById('AreaBlock');
-            if (areaBlock) {
-                const areaBlockMatrix = interpretAreaBlock(areaBlock);
+            const game = document.getElementById('game');
+            if (game) {
+                const areaBlockMatrix = interpretGameBlock(game);
                 solveAreaBlock(areaBlockMatrix);
             }
         });
 
         document.getElementById('flag').addEventListener('click', () => {
-            const cell_0_0 = document.querySelector(`#cell_0_0`);
-            console.log(cell_0_0);
-            if (cell_0_0) {                // drapeau = clic droit
-                dispatchClick(cell_0_0, 2);
-                cell_0_0.classList.add('test_O');
+            const cell_1_1 = document.getElementById('1_1');
+            console.log(cell_1_1);
+            if (cell_1_1) {                // drapeau = clic droit
+                dispatchClick(cell_1_1, 2);
+                cell_1_1.classList.add('test_O');
             }
         });
 
         document.getElementById('open').addEventListener('click', () => {
-            const cell_0_1 = document.querySelector(`#cell_0_1`);
-            console.log(cell_0_1);
-            if (cell_0_1) {
-                dispatchClick(cell_0_1, 0);
-                cell_0_1.classList.add('test_1');
+            const cell_2_1 = document.getElementById('2_1');
+            console.log(cell_2_1);
+            if (cell_2_1) {
+                dispatchClick(cell_2_1, 0);
+                cell_2_1.classList.add('test_1');
             }
         });
     }
 
     function interpretAreaBlock(areaBlock) {
-        if (!areaBlock) return null;
+        // Old function, replaced by interpretGameBlock
+        return null;
+    }
+
+    function interpretGameBlock(game) {
+        if (!game) return null;
         // Sélectionne toutes les cases du nouveau format
-        const squares = areaBlock.querySelectorAll('.square');
+        const squares = game.querySelectorAll('.square');
         const areaBlockMatrix = Array(9).fill().map(() => Array(9).fill(0));
 
         squares.forEach(square => {
