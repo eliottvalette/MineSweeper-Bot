@@ -301,6 +301,117 @@
         }
     }
 
+    function advancedDeductions(area) {
+        const H = area.length, W = area[0].length, MAX = 8;
+
+        /* 1) collecte des équations (“numéro” → inconnues, mines restantes) */
+        const eqs = [];
+        for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+            const v = area[r][c];
+            if (v <= 0) continue;
+            const unknown = [], flags = [];
+            for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+                if (!dr && !dc) continue;
+                const nr = r + dr, nc = c + dc;
+                if (nr < 0 || nr >= H || nc < 0 || nc >= W) continue;
+                const n = area[nr][nc];
+                if (n === -1) unknown.push([nr, nc]);
+                else if (n === 'X') flags.push([nr, nc]);
+            }
+            const rest = v - flags.length;
+            if (unknown.length && rest >= 0)
+                eqs.push({ cells: unknown, mines: rest });
+        }
+        if (!eqs.length) return;
+
+        /* 2) génère des groupes de taille ≤ MAX : (i) chaque équation seule,
+            (ii) union de deux équations si ça tient dans MAX.             */
+        const groupKeys = new Set();                 // évite doublons
+        const groups = [];
+
+        const pushGroup = (cellsArr) => {
+            if (cellsArr.length === 0 || cellsArr.length > MAX) return;
+            const key = cellsArr.map(([r, c]) => `${r}_${c}`).sort().join('|');
+            if (groupKeys.has(key)) return;
+            groupKeys.add(key);
+            groups.push(cellsArr);
+        };
+
+        eqs.forEach(eq => pushGroup(eq.cells));
+
+        for (let i = 0; i < eqs.length; i++) {
+            for (let j = i + 1; j < eqs.length; j++) {
+                const union = [...eqs[i].cells, ...eqs[j].cells];
+                /* retire doublons */
+                const uniq = [];
+                const seen = new Set();
+                union.forEach(([r, c]) => {
+                    const k = `${r}_${c}`;
+                    if (!seen.has(k)) { uniq.push([r, c]); seen.add(k); }
+                });
+                pushGroup(uniq);
+            }
+        }
+
+        /* 3) énumération sur chaque groupe */
+        const sureMine = new Set(), sureSafe = new Set();
+
+        groups.forEach(group => {
+            const n = group.length;
+            const idx = new Map(group.map((p, i) => [`${p[0]}_${p[1]}`, i]));
+            const allMine = Array(n).fill(true), allSafe = Array(n).fill(true);
+
+            outer: for (let mask = 0; mask < (1 << n); mask++) {
+                for (const { cells, mines } of eqs) {
+                    /* compte mines assignées À L’INTÉRIEUR du groupe       */
+                    let inside = 0, outsideUnknown = 0;
+                    cells.forEach(([r, c]) => {
+                        const k = `${r}_${c}`;
+                        if (idx.has(k)) {
+                            if (mask & (1 << idx.get(k))) inside++;
+                        } else {
+                            if (area[r][c] === -1) outsideUnknown++;   // inconnue hors groupe
+                        }
+                    });
+                    const minPossible = inside;                       // si tout le reste est safe
+                    const maxPossible = inside + outsideUnknown;      // si tout le reste est mine
+                    if (mines <  minPossible || mines > maxPossible)
+                        continue outer;                                // masque incompatible
+                }
+                /* masque compatible → met à jour les certitudes          */
+                for (let i = 0; i < n; i++) {
+                    if (mask & (1 << i)) allSafe[i] = false;
+                    else                 allMine[i] = false;
+                }
+            }
+
+            allMine.forEach((m, i) => {
+                if (!m) return;
+                sureMine.add(`${group[i][0]}_${group[i][1]}`);
+            });
+            allSafe.forEach((s, i) => {
+                if (!s) return;
+                sureSafe.add(`${group[i][0]}_${group[i][1]}`);
+            });
+        });
+
+        /* 4) coloration (identique à l’ancienne version) */
+        sureMine.forEach(k => {
+            const [r, c] = k.split('_').map(Number);
+            const el = document.querySelector(`#cell_${c}_${r}`);
+            if (el && el.classList.contains('hdn_closed')) {
+                changeStyle(el, 1)
+            };
+        });
+        sureSafe.forEach(k => {
+            const [r, c] = k.split('_').map(Number);
+            const el = document.querySelector(`#cell_${c}_${r}`);
+            if (el && el.classList.contains('hdn_closed')) {
+                changeStyle(el, 0);
+            };
+        });
+    }
+
     async function solveAreaBlock(areaBlockMatrix) {
         if (!areaBlockMatrix) return;
         const height = areaBlockMatrix.length;
@@ -323,6 +434,18 @@
         }
 
         while (true) {
+
+            if (Math.random() < 0.01) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell) {
+                            cell.style.backgroundColor = '';
+                            cell.style.border = '';
+                        }
+                    }
+                }
+            }
 
             // 1. If all cells are closed, remove the added style for opened cells
             let allClosed = true;
@@ -407,7 +530,10 @@
                     }
                 }
             }         
-            
+
+            // 6. Advanced deductions
+            advancedDeductions(areaBlockMatrix);
+
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
             if (document.getElementById('AreaBlock_g2')) {
@@ -415,7 +541,7 @@
             }
             count++;
 
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
     }
 
