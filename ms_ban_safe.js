@@ -320,7 +320,7 @@
 
         while (true) {
 
-            // 0. If all cells are closed, remove the added style for opened cells
+            // 1. If all cells are closed, remove the added style for opened cells
             let allClosed = true;
             for (let i = 0; i < height; i++) {
                 for (let j = 0; j < width; j++) {
@@ -344,7 +344,7 @@
                 }
             }
 
-            // 0. If Cell is opened, remove the added style for opened cells
+            // 2. If Cell is opened, remove the added style for opened cells
             for (let i = 0; i < height; i++) {
                 for (let j = 0; j < width; j++) {
                     if (areaBlockMatrix[i][j] > -1) {
@@ -352,35 +352,6 @@
                         if (cell) {
                             cell.style.backgroundColor = '';
                             cell.style.border = '';
-                        }
-                    }
-                }
-            }
-
-
-
-
-            // 1. Click safe cells if all mines are already flagged
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
-                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                        if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
-                            changeStyleCellsAround(areaBlockMatrix, i, j, false);
-                            areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
-                        }
-                    }
-                }
-            }
-
-            // 2. Flag mines if all hidden cells must be mines
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
-                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                        if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
-                            changeStyleCellsAround(areaBlockMatrix, i, j, true);
-                            areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
                         }
                     }
                 }
@@ -407,6 +378,34 @@
                     }
                 }
             }
+
+            // 4. Click safe cells if all mines are already flagged
+            for (let i = 0; i < height; i++) {
+                for (let j = 0; j < width; j++) {
+                    if (areaBlockMatrix[i][j] > 0) {
+                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                        if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
+                            changeStyleCellsAround(areaBlockMatrix, i, j, false);
+                            areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                        }
+                    }
+                }
+            }
+
+            // 5. Flag mines if all hidden cells must be mines
+            for (let i = 0; i < height; i++) {
+                for (let j = 0; j < width; j++) {
+                    if (areaBlockMatrix[i][j] > 0) {
+                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                        if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
+                            changeStyleCellsAround(areaBlockMatrix, i, j, true);
+                            areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                        }
+                    }
+                }
+            }
+
+            
 
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
