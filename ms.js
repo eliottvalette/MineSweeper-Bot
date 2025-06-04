@@ -96,7 +96,10 @@
 
     (function() {
         'use strict';
-    
+
+        let forceStop = false;
+        console.log('forceStop :', forceStop);
+
         // Helper universel (pointer + mouse)
         function dispatchClick(el, button = 0) {
             const mask = button === 2 ? 2 : 1; // 1 = gauche, 2 = droit
@@ -167,32 +170,15 @@
                     }
                 </style>
                 <div class="nexus-interface">
-                    <button id="debutant"> Go Debutant </button>
-                    <button id="intermediaire"> Go Intermediaire </button>
-                    <button id="expert"> Go Expert </button>
                     <button id="areaBlock"> Area Block </button>
                     <button id="flag"> Flag 1_1</button>
                     <button id="open"> Open 1_2</button>
+                    <button id="stop"> Stop </button>
                     <button id="solve"> Solve </button>
                 </div>
             `;
             document.body.appendChild(interfaceContainer);
     
-            // Add click handlers for buttons using proper CSS selectors
-            document.getElementById('debutant').addEventListener('click', () => {
-                const targetElement = document.querySelector('.level1-link');
-                if (targetElement) targetElement.click();
-            });
-    
-            document.getElementById('intermediaire').addEventListener('click', () => {
-                const targetElement = document.querySelector('.level2-link');
-                if (targetElement) targetElement.click();
-            });
-    
-            document.getElementById('expert').addEventListener('click', () => {
-                const targetElement = document.querySelector('.level3-link');
-                if (targetElement) targetElement.click();
-            });
     
             document.getElementById('areaBlock').addEventListener('click', () => {
                 const game = document.getElementById('game');
@@ -223,6 +209,10 @@
                     dispatchClick(cell_2_1, 0);
                     cell_2_1.classList.add('test_1');
                 }
+            });
+
+            document.getElementById('stop').addEventListener('click', () => {
+                forceStop = true;
             });
         }
     
@@ -310,13 +300,114 @@
             }
         }
     
+        // === Advanced Deductions from ms_ban_safe.js, adapté pour ms.js ===
+        function advancedDeductions(area) {
+            const H = area.length, W = area[0].length, MAX = 8;
+            const eqs = [];
+            for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+                const v = area[r][c];
+                if (v <= 0) continue;
+                const unknown = [], flags = [];
+                for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+                    if (!dr && !dc) continue;
+                    const nr = r + dr, nc = c + dc;
+                    if (nr < 0 || nr >= H || nc < 0 || nc >= W) continue;
+                    const n = area[nr][nc];
+                    if (n === -1) unknown.push([nr, nc]);
+                    else if (n === 'X') flags.push([nr, nc]);
+                }
+                const rest = v - flags.length;
+                if (unknown.length && rest >= 0)
+                    eqs.push({ cells: unknown, mines: rest });
+            }
+            if (!eqs.length) return false;
+            const groupKeys = new Set();
+            const groups = [];
+            const pushGroup = (cellsArr) => {
+                if (cellsArr.length === 0 || cellsArr.length > MAX) return;
+                const key = cellsArr.map(([r, c]) => `${r}_${c}`).sort().join('|');
+                if (groupKeys.has(key)) return;
+                groupKeys.add(key);
+                groups.push(cellsArr);
+            };
+            eqs.forEach(eq => pushGroup(eq.cells));
+            for (let i = 0; i < eqs.length; i++) {
+                for (let j = i + 1; j < eqs.length; j++) {
+                    const union = [...eqs[i].cells, ...eqs[j].cells];
+                    const uniq = [];
+                    const seen = new Set();
+                    union.forEach(([r, c]) => {
+                        const k = `${r}_${c}`;
+                        if (!seen.has(k)) { uniq.push([r, c]); seen.add(k); }
+                    });
+                    pushGroup(uniq);
+                }
+            }
+            const sureMine = new Set(), sureSafe = new Set();
+            groups.forEach(group => {
+                const n = group.length;
+                const idx = new Map(group.map((p, i) => [`${p[0]}_${p[1]}`, i]));
+                const allMine = Array(n).fill(true), allSafe = Array(n).fill(true);
+                outer: for (let mask = 0; mask < (1 << n); mask++) {
+                    for (const { cells, mines } of eqs) {
+                        let inside = 0, outsideUnknown = 0;
+                        cells.forEach(([r, c]) => {
+                            const k = `${r}_${c}`;
+                            if (idx.has(k)) {
+                                if (mask & (1 << idx.get(k))) inside++;
+                            } else {
+                                if (area[r][c] === -1) outsideUnknown++;
+                            }
+                        });
+                        const minPossible = inside;
+                        const maxPossible = inside + outsideUnknown;
+                        if (mines <  minPossible || mines > maxPossible)
+                            continue outer;
+                    }
+                    for (let i = 0; i < n; i++) {
+                        if (mask & (1 << i)) allSafe[i] = false;
+                        else                 allMine[i] = false;
+                    }
+                }
+                allMine.forEach((m, i) => {
+                    if (!m) return;
+                    sureMine.add(`${group[i][0]}_${group[i][1]}`);
+                });
+                allSafe.forEach((s, i) => {
+                    if (!s) return;
+                    sureSafe.add(`${group[i][0]}_${group[i][1]}`);
+                });
+            });
+            let action = false;
+            sureMine.forEach(k => {
+                const [r, c] = k.split('_').map(Number);
+                const cell = document.getElementById(`${r+1}_${c+1}`);
+                if (cell && cell.classList.contains('bombflagged')) return;
+                if (cell && area[r][c] === -1) {
+                    dispatchClick(cell, 2); // flag
+                    action = true;
+                }
+            });
+            sureSafe.forEach(k => {
+                const [r, c] = k.split('_').map(Number);
+                const cell = document.getElementById(`${r+1}_${c+1}`);
+                if (cell && area[r][c] === -1) {
+                    dispatchClick(cell, 0); // open
+                    action = true;
+                }
+            });
+            return action;
+        }
+    
         async function solveAreaBlock(areaBlockMatrix) {
+            console.log('forceStop :', forceStop);
             if (!areaBlockMatrix) return;
             const height = areaBlockMatrix.length;
             const width = areaBlockMatrix[0].length;
             let changed = true;
             let count = 0;
-            while (changed || count < 10) {
+
+            while (areaBlockMatrix.some(row => row.some(cell => cell === -1)) && !forceStop) {
                 changed = false;
                 // 0. Check if there is only closed cells
                 let onlyClosedCells = true;
@@ -374,149 +465,37 @@
                     }
                 }
     
-                // 3. If No change, use probability-based approach
-                if (!changed) {
-                    count++;
+                // === Nouvelle étape : déductions avancées ===
+                if (advancedDeductions(areaBlockMatrix)) {
+                    areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
+                    changed = true;
                 }
-                if (count > 5) {
-                    count = 0;
-                    // Calculate probabilities for each hidden cell
-                    const probabilities = calculateProbabilities(areaBlockMatrix);
-    
-                    if (probabilities.length > 0) {
-                        // Sort by probability (lowest first)
-                        probabilities.sort((a, b) => a.probability - b.probability);
-    
-                        // Click the cell with the lowest probability of being a mine
-                        const bestMove = probabilities[0];
-                        console.log(`Probability-based move: ${bestMove.i+1}_${bestMove.j+1} (${bestMove.probability.toFixed(3)})`);
-    
-                        const cell = document.getElementById(`${bestMove.i + 1}_${bestMove.j + 1}`);
+
+                if (!changed) {
+                    // click randomly a closed cell
+                    const closedCells = [];
+                    for (let i = 0; i < height; i++) {
+                        for (let j = 0; j < width; j++) {
+                            if (areaBlockMatrix[i][j] === -1) {
+                                closedCells.push([i, j]);
+                            }
+                        }
+                    }
+                    if (closedCells.length > 0) {
+                        const [randomI, randomJ] = closedCells[Math.floor(Math.random() * closedCells.length)];
+                        const cell = document.getElementById(`${randomI + 1}_${randomJ + 1}`);
                         if (cell) {
                             dispatchClick(cell, 0);
-                            areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
-                            changed = true;
-                        }
-                    } else {
-                        // Fallback to random selection if no probabilities could be calculated
-                        const closedCells = [];
-                        for (let i = 0; i < height; i++) {
-                            for (let j = 0; j < width; j++) {
-                                if (areaBlockMatrix[i][j] === -1) {
-                                    closedCells.push([i, j]);
-                                }
-                            }
-                        }
-                        if (closedCells.length > 0) {
-                            const [randomI, randomJ] = closedCells[Math.floor(Math.random() * closedCells.length)];
-                            console.log(`Random fallback move: ${randomI+1}_${randomJ+1}`);
-                            const cell = document.getElementById(`${randomI + 1}_${randomJ + 1}`);
-                            if (cell) {
-                                dispatchClick(cell, 0);
-                                areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
-                                changed = true;
-                            }
                         }
                     }
                 }
     
                 // Re-interpret the board after each round
                 areaBlockMatrix = interpretGameBlock(document.getElementById('game'));
-                count++;
     
                 await new Promise(resolve => setTimeout(resolve, 1));
             }
-        }
-    
-        // Calculate probabilities of each hidden cell containing a mine
-        function calculateProbabilities(areaBlockMatrix) {
-            if (!areaBlockMatrix) return [];
-            const height = areaBlockMatrix.length;
-            const width = areaBlockMatrix[0].length;
-    
-            // Track probability estimates for each hidden cell
-            const probabilities = [];
-            const cellProbabilityMap = new Map(); // Map to track total probability and count for each cell
-    
-            // For each numbered cell
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    // Only consider numbered cells (1-8)
-                    if (areaBlockMatrix[i][j] > 0) {
-                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-    
-                        // If there are hidden cells and mines to find
-                        if (hiddenCount > 0 && areaBlockMatrix[i][j] - minesCount > 0) {
-                            // Calculate probability for this group of cells
-                            const probability = (areaBlockMatrix[i][j] - minesCount) / hiddenCount;
-    
-                            // Assign this probability to each hidden cell around
-                            for (let k = -1; k <= 1; k++) {
-                                for (let l = -1; l <= 1; l++) {
-                                    const newI = i + k;
-                                    const newJ = j + l;
-    
-                                    if (newI >= 0 && newI < height && newJ >= 0 && newJ < width &&
-                                        areaBlockMatrix[newI][newJ] === -1) {
-    
-                                        const cellKey = `${newI},${newJ}`;
-                                        if (!cellProbabilityMap.has(cellKey)) {
-                                            cellProbabilityMap.set(cellKey, { total: 0, count: 0 });
-                                        }
-    
-                                        const cellData = cellProbabilityMap.get(cellKey);
-                                        cellData.total += probability;
-                                        cellData.count += 1;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-    
-            // Convert the map to array of probability objects
-            cellProbabilityMap.forEach((data, key) => {
-                const [i, j] = key.split(',').map(Number);
-                const avgProbability = data.total / data.count;
-                probabilities.push({ i, j, probability: avgProbability });
-            });
-    
-            // Add border cells with a higher probability
-            // These are typically more dangerous as we have less information about them
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    if (areaBlockMatrix[i][j] === -1) {
-                        const cellKey = `${i},${j}`;
-                        if (!cellProbabilityMap.has(cellKey)) {
-                            // Check if this is a cell without any adjacent numbered cells
-                            // These are typically more risky, so assign higher probability
-                            let hasAdjacentNumber = false;
-                            for (let k = -1; k <= 1; k++) {
-                                for (let l = -1; l <= 1; l++) {
-                                    const newI = i + k;
-                                    const newJ = j + l;
-                                    if (newI >= 0 && newI < height && newJ >= 0 && newJ < width &&
-                                        areaBlockMatrix[newI][newJ] > 0) {
-                                        hasAdjacentNumber = true;
-                                        break;
-                                    }
-                                }
-                                if (hasAdjacentNumber) break;
-                            }
-    
-                            // Add to probabilities with a higher value if it's an isolated cell
-                            probabilities.push({
-                                i,
-                                j,
-                                probability: hasAdjacentNumber ? 0.5 : 0.8 // Isolated cells are more risky
-                            });
-                        }
-                    }
-                }
-            }
-    
-            return probabilities;
+            forceStop = true;
         }
     
         // Initialize interface when DOM is ready

@@ -417,6 +417,7 @@
         const height = areaBlockMatrix.length;
         const width = areaBlockMatrix[0].length;
         let count = 0;
+        let handMode = false;
 
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
@@ -472,20 +473,21 @@
             }
 
             // 2. If Cell is opened, remove the added style for opened cells
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    if (areaBlockMatrix[i][j] > -1) {
-                        const cell = document.querySelector(`#cell_${j}_${i}`);
-                        if (cell) {
-                            cell.style.backgroundColor = '';
-                            cell.style.border = '';
+            if (handMode) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > -1) {
+                            const cell = document.querySelector(`#cell_${j}_${i}`);
+                            if (cell) {
+                                cell.style.backgroundColor = '';
+                                cell.style.border = '';
+                            }
                         }
                     }
                 }
             }
-
             // 3. Look for the cells that are opened in the opponent's area block
-            if (g2_usage && areaBlockMatrix_g2) {
+            if (g2_usage && areaBlockMatrix_g2 && handMode) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         if (!(areaBlockMatrix[i][j] > -1 || areaBlockMatrix[i][j] === 'X' || areaBlockMatrix_g2[i][j] === -1)) {
@@ -506,30 +508,34 @@
             }
 
             // 4. Click safe cells if all mines are already flagged
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
-                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                        if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
-                            changeStyleCellsAround(areaBlockMatrix, i, j, false);
-                            areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+            if (handMode) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > 0) {
+                            const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                            if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
+                                changeStyleCellsAround(areaBlockMatrix, i, j, false);
+                                areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                            }
                         }
                     }
                 }
             }
 
             // 5. Flag mines if all hidden cells must be mines
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
-                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                        if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
-                            changeStyleCellsAround(areaBlockMatrix, i, j, true);
-                            areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+            if (handMode) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > 0) {
+                            const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                            if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
+                                changeStyleCellsAround(areaBlockMatrix, i, j, true);
+                                areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                            }
                         }
                     }
-                }
-            }         
+                }       
+            }  
 
             // 6. Advanced deductions
             advancedDeductions(areaBlockMatrix);
@@ -541,7 +547,7 @@
             }
             count++;
 
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, 600));
         }
     }
 
