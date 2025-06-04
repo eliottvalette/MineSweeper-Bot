@@ -100,7 +100,7 @@
             <style>
                 .nexus-interface {
                     position: fixed;
-                    right: 10px;
+                    left: 10px;
                     top: 100px;
                     z-index: 999;
                     display: flex;
@@ -316,7 +316,11 @@
                 }
             }
         }
-        let areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
+
+        let areaBlockMatrix_g2 = null;
+        if (document.getElementById('AreaBlock_g2')) {
+            areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
+        }
 
         while (true) {
 
@@ -358,21 +362,20 @@
             }
 
             // 3. Look for the cells that are opened in the opponent's area block
-            if (g2_usage) {
+            if (g2_usage && areaBlockMatrix_g2) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
-                        if (areaBlockMatrix[i][j] > -1 || areaBlockMatrix[i][j] === 'X' || areaBlockMatrix_g2[i][j] === -1) {
-                            continue;
-                        }
-                        if (areaBlockMatrix_g2[i][j] === 'X') {
-                            const cell = document.querySelector(`#cell_${j}_${i}`);
-                            if (cell) {
-                                changeStyle(cell, 1);
-                            }
-                        } else {
-                            const cell = document.querySelector(`#cell_${j}_${i}`);
-                            if (cell) {
-                                changeStyle(cell, 0);
+                        if (!(areaBlockMatrix[i][j] > -1 || areaBlockMatrix[i][j] === 'X' || areaBlockMatrix_g2[i][j] === -1)) {
+                            if (areaBlockMatrix_g2[i][j] === 'X') {
+                                const cell = document.querySelector(`#cell_${j}_${i}`);
+                                if (cell) {
+                                    changeStyle(cell, 1);
+                                }
+                            } else {
+                                const cell = document.querySelector(`#cell_${j}_${i}`);
+                                if (cell) {
+                                    changeStyle(cell, 0);
+                                }
                             }
                         }
                     }
@@ -403,13 +406,13 @@
                         }
                     }
                 }
-            }
-
-            
+            }            
 
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
-            areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
+            if (document.getElementById('AreaBlock_g2')) {
+                areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
+            }
             count++;
 
             await new Promise(resolve => setTimeout(resolve, 100));
