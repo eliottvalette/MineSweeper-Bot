@@ -10,6 +10,7 @@
 // ==/UserScript==
 
 // Do Not Touch This Structure
+//  My Game Area
 //  <div id="AreaBlock" class="pull-left">
 //    <div id="cell_0_0" class="cell size24 hdn_closed" data-x="0" data-y="0"></div>
 //    <div id="cell_1_0" class="cell size24 hdn_closed" data-x="1" data-y="0"></div>
@@ -36,17 +37,60 @@
 //  </div>
 
 
+// Do Not Touch This Structure
+//  My Opponent's Game Area
+//  <div id="AreaBlock_g2" class="pull-left">
+//      <div id="cell_0_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="0" data-y="0"></div>
+//      <div id="cell_1_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="1" data-y="0"></div>
+//      <div id="cell_2_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="2" data-y="0"></div>
+//      <div id="cell_3_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="3" data-y="0"></div>
+//      <div id="cell_4_0_g2" class="cell size28 hdn_opened hdn_type1" data-x="4" data-y="0"></div>
+//      <div id="cell_5_0_g2" class="cell size28 hdn_closed hdn_flag" data-x="5" data-y="0"></div>
+//      <div id="cell_6_0_g2" class="cell size28 hdn_opened hdn_type2" data-x="6" data-y="0"></div>
+//      <div id="cell_7_0_g2" class="cell size28 hdn_closed hdn_flag" data-x="7" data-y="0"></div>
+//      <div id="cell_8_0_g2" class="cell size28 hdn_opened hdn_type2" data-x="8" data-y="0"></div>
+//      <div id="cell_9_0_g2" class="cell size28 hdn_opened hdn_type1" data-x="9" data-y="0"></div>
+//      <div id="cell_10_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="10" data-y="0"></div>
+//      <div id="cell_11_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="11" data-y="0"></div>
+//      <div id="cell_12_0_g2" class="cell size28 hdn_opened hdn_type1" data-x="12" data-y="0"></div>
+//      <div id="cell_13_0_g2" class="cell size28 hdn_opened hdn_type2" data-x="13" data-y="0"></div>
+//      <div id="cell_14_0_g2" class="cell size28 hdn_opened hdn_type3" data-x="14" data-y="0"></div>
+//      <div id="cell_15_0_g2" class="cell size28 hdn_opened hdn_type2" data-x="15" data-y="0"></div>
+//      <div class="clear"></div>
+//      <div id="cell_0_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="0" data-y="1"></div>
+//      <div id="cell_1_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="1" data-y="1"></div>
+//      <div id="cell_2_1_g2" class="cell size28 hdn_opened hdn_type0" data-x="2" data-y="1"></div>
+//      <div id="cell_3_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="3" data-y="1"></div>
+//      <div id="cell_4_1_g2" class="cell size28 hdn_opened hdn_type3" data-x="4" data-y="1"></div>
+//      <div id="cell_5_1_g2" class="cell size28 hdn_opened hdn_type3" data-x="5" data-y="1"></div>
+//      <div id="cell_6_1_g2" class="cell size28 hdn_opened hdn_type3" data-x="6" data-y="1"></div>
+//      <div id="cell_7_1_g2" class="cell size28 hdn_opened hdn_type2" data-x="7" data-y="1"></div>
+//      <div id="cell_8_1_g2" class="cell size28 hdn_closed hdn_flag" data-x="8" data-y="1"></div>
+//      <div id="cell_9_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="9" data-y="1"></div>
+//      <div id="cell_10_1_g2" class="cell size28 hdn_opened hdn_type0" data-x="10" data-y="1"></div>
+//      <div id="cell_11_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="11" data-y="1"></div>
+//      <div id="cell_12_1_g2" class="cell size28 hdn_opened hdn_type2" data-x="12" data-y="1"></div>
+//      <div id="cell_13_1_g2" class="cell size28 hdn_closed hdn_flag" data-x="13" data-y="1"></div>
+//      <div id="cell_14_1_g2" class="cell size28 hdn_closed hdn_flag" data-x="14" data-y="1"></div>
+//      <div id="cell_15_1_g2" class="cell size28 hdn_closed hdn_flag" data-x="15" data-y="1"></div>
+//      <div class="clear"></div>
+
+
 
 (function() {
     'use strict';
+
+    let g2_usage = true;
 
     function changeStyle(el, button) {
         if (button === 0) { // change cell style into red
             el.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
             el.style.border = '2px solid red';
+            el.style.zIndex = '1000';
         } else { // change cell style into green
             el.style.backgroundColor = 'rgba(0, 255, 0, 0.3)';
             el.style.border = '2px solid green';
+            el.style.zIndex = '1000';
         }
     }
 
@@ -89,34 +133,32 @@
                 }
             </style>
             <div class="nexus-interface">
-                <button id="debutant"> Go Debutant </button>
-                <button id="intermediaire"> Go Intermediaire </button>
-                <button id="expert"> Go Expert </button>
                 <button id="areaBlock"> Area Block </button>
+                <button id="areaBlock_g2"> Area Block G2 </button>
+                <button id="toggle_g2"> Toggle G2 Usage </button>
                 <button id="solve"> Solve </button>
             </div>
         `;
         document.body.appendChild(interfaceContainer);
 
-        // Add click handlers for buttons using proper CSS selectors
-        document.getElementById('debutant').addEventListener('click', () => {
-            const targetElement = document.querySelector('.level1-link');
-            if (targetElement) targetElement.click();
-        });
-
-        document.getElementById('intermediaire').addEventListener('click', () => {
-            const targetElement = document.querySelector('.level2-link');
-            if (targetElement) targetElement.click();
-        });
-
-        document.getElementById('expert').addEventListener('click', () => {
-            const targetElement = document.querySelector('.level3-link');
-            if (targetElement) targetElement.click();
-        });
-
         document.getElementById('areaBlock').addEventListener('click', () => {
             const areaBlock = document.getElementById('AreaBlock');
-            if (areaBlock) interpretAreaBlock(areaBlock);
+            if (areaBlock) {
+                const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                console.log(areaBlockMatrix);
+            }
+        });
+
+        document.getElementById('areaBlock_g2').addEventListener('click', () => {
+            const areaBlock = document.getElementById('AreaBlock_g2');
+            if (areaBlock) {
+                const areaBlockMatrix = interpretOpponentAreaBlock(areaBlock);
+                console.log(areaBlockMatrix);
+            }
+        });
+
+        document.getElementById('toggle_g2').addEventListener('click', () => {
+            g2_usage = !g2_usage;
         });
 
         document.getElementById('solve').addEventListener('click', () => {
@@ -150,11 +192,8 @@
 
         for (let i = 0; i < maxRow; i++) {
             for (let j = 0; j < maxCol; j++) {
-                console.log(`i = ${i}, j = ${j}`);
                 const cell = cellsArray[i * maxCol + j];
                 if (!cell) continue;
-
-                console.log(cell.classList);
                 if (cell.classList.contains('hdn_closed')) {
                     if (cell.classList.contains('hdn_flag')) {
                         areaBlockMatrix[i][j] = 'X';
@@ -171,7 +210,51 @@
                 }
             }
         }
-        console.log(areaBlockMatrix);
+        return areaBlockMatrix;
+    }
+
+    function interpretOpponentAreaBlock(areaBlock) {
+        if (!areaBlock) return null;
+
+        const cells = areaBlock.querySelectorAll('.cell');
+        let maxRow = 0, maxCol = 0;
+
+        cells.forEach(cell => {
+            const [cellStr, colStr, rowStr] = cell.id.split('_');
+            const row = parseInt(rowStr, 10);
+            const col = parseInt(colStr, 10);
+            if (row > maxRow) maxRow = row;
+            if (col > maxCol) maxCol = col;
+        });
+
+        maxRow++;
+        maxCol++;
+
+        const cellsArray = Array.from(cells);
+        const areaBlockMatrix = Array(maxRow).fill().map(() => Array(maxCol).fill(0));
+
+        for (let i = 0; i < maxRow; i++) {
+            for (let j = 0; j < maxCol; j++) {
+                const cell = cellsArray[i * maxCol + j];
+                if (!cell) continue;
+                if (cell.id.includes('g2')) {
+                    if (cell.classList.contains('hdn_closed')) {
+                        if (cell.classList.contains('hdn_flag')) {
+                            areaBlockMatrix[i][j] = 'X';
+                        } else {
+                            areaBlockMatrix[i][j] = -1;
+                        }
+                    } else if (cell.classList.contains('hdn_opened')) {
+                        for (let k = 0; k < maxCol; k++) {
+                            if (cell.classList.contains(`hdn_type${k}`)) {
+                                areaBlockMatrix[i][j] = k;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         return areaBlockMatrix;
     }
 
@@ -207,12 +290,10 @@
                 const newI = i + k;
                 const newJ = j + l;
                 if (newI >= 0 && newI < height && newJ >= 0 && newJ < width) {
-                    console.log(`areaBlockMatrix[${newI}][${newJ}] = ${areaBlockMatrix[newI][newJ]}`);
                     if (areaBlockMatrix[newI][newJ] === -1) {
                         const cell = document.querySelector(`#cell_${newJ}_${newI}`);
                         if (cell) {
                             changeStyle(cell, flag ? 2 : 0);
-                            console.log(`clicked cell ${newJ}_${newI}`);
                         }
                     }
                 }
@@ -235,12 +316,25 @@
                 }
             }
         }
+        let areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
+
         while (true) {
 
-            // 0. Double check and remove the added style for opened cells
+            // 0. If all cells are closed, remove the added style for opened cells
+            let allClosed = true;
             for (let i = 0; i < height; i++) {
                 for (let j = 0; j < width; j++) {
                     if (areaBlockMatrix[i][j] !== -1) {
+                        allClosed = false;
+                        break;
+                    }
+                }
+                if (!allClosed) break;
+            }
+
+            if (allClosed) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
                         const cell = document.querySelector(`#cell_${j}_${i}`);
                         if (cell) {
                             cell.style.backgroundColor = '';
@@ -249,6 +343,23 @@
                     }
                 }
             }
+
+            // 0. If Cell is opened, remove the added style for opened cells
+            for (let i = 0; i < height; i++) {
+                for (let j = 0; j < width; j++) {
+                    if (areaBlockMatrix[i][j] > -1) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell) {
+                            cell.style.backgroundColor = '';
+                            cell.style.border = '';
+                        }
+                    }
+                }
+            }
+
+
+
+
             // 1. Click safe cells if all mines are already flagged
             for (let i = 0; i < height; i++) {
                 for (let j = 0; j < width; j++) {
@@ -275,8 +386,31 @@
                 }
             }
 
+            // 3. Look for the cells that are opened in the opponent's area block
+            if (g2_usage) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > -1 || areaBlockMatrix[i][j] === 'X' || areaBlockMatrix_g2[i][j] === -1) {
+                            continue;
+                        }
+                        if (areaBlockMatrix_g2[i][j] === 'X') {
+                            const cell = document.querySelector(`#cell_${j}_${i}`);
+                            if (cell) {
+                                changeStyle(cell, 1);
+                            }
+                        } else {
+                            const cell = document.querySelector(`#cell_${j}_${i}`);
+                            if (cell) {
+                                changeStyle(cell, 0);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+            areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
             count++;
 
             await new Promise(resolve => setTimeout(resolve, 100));

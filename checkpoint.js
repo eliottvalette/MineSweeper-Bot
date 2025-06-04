@@ -10,6 +10,7 @@
 // ==/UserScript==
 
 // Do Not Touch This Structure
+// My Game Area
 //  <div id="AreaBlock" class="pull-left">
 //    <div id="cell_0_0" class="cell size24 hdd_closed" data-x="0" data-y="0"></div>
 //    <div id="cell_1_0" class="cell size24 hdd_closed" data-x="1" data-y="0"></div>
@@ -34,7 +35,6 @@
 //    <div class="clear"></div>
 //    ...
 //  </div>
-
 
 
 (function() {
