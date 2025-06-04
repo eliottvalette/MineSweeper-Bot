@@ -84,11 +84,11 @@
 
     function changeStyle(el, button) {
         if (button === 0) { // change cell style into red
-            el.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+            el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
             el.style.border = '2px solid red';
             el.style.zIndex = '1000';
         } else { // change cell style into green
-            el.style.backgroundColor = 'rgba(0, 255, 0, 0.3)';
+            el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
             el.style.border = '2px solid green';
             el.style.zIndex = '1000';
         }
@@ -101,7 +101,7 @@
                 .nexus-interface {
                     position: fixed;
                     left: 10px;
-                    top: 100px;
+                    bottom: 100px;
                     z-index: 999;
                     display: flex;
                     flex-direction: column;
@@ -406,8 +406,8 @@
                         }
                     }
                 }
-            }            
-
+            }         
+            
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
             if (document.getElementById('AreaBlock_g2')) {
