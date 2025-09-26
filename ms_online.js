@@ -121,6 +121,7 @@
                     box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
                     border-radius: 5px;
                     overflow: hidden;
+                    cursor: move;
                 }
                 .nexus-interface-content {
                     padding: 10px;
@@ -164,9 +165,7 @@
             if (areaBlock) {
                 const cells = areaBlock.querySelectorAll('.cell');
                 cells.forEach(cell => {
-                    console.log('before cell', cell.style.pointerEvents);
                     cell.style.pointerEvents = 'auto'
-                    console.log('after cell', cell.style.pointerEvents);
                 });
             }
             
@@ -186,6 +185,77 @@
             if (areaBlock) {
                 const areaBlockMatrix = interpretAreaBlock(areaBlock);
                 advancedDeductions(areaBlockMatrix, true);
+            }
+        });
+
+        // Make interface draggable
+        const nexusInterface = document.querySelector('.nexus-interface');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        nexusInterface.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+
+            if (e.target === nexusInterface) {
+                isDragging = true;
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                nexusInterface.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+            }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+
+        // Keyboard shortcut for spacebar
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyD') {
+                e.preventDefault();
+                botEnabled = !botEnabled;
+                document.getElementById('toggleBot').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
+                
+                // Make all cells clickable when bot is disabled
+                const areaBlock = document.getElementById('AreaBlock');
+                if (areaBlock) {
+                    const cells = areaBlock.querySelectorAll('.cell');
+                    cells.forEach(cell => {
+                        cell.style.pointerEvents = 'auto'
+                    });
+                }
+                
+                // If bot is enabled, automatically click solve
+                if (botEnabled) {
+                    const areaBlock = document.getElementById('AreaBlock');
+                    if (areaBlock) {
+                        const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                        solveAreaBlock(areaBlockMatrix);
+                    }
+                }
+                
+                console.log('botEnabled', botEnabled);
             }
         });
     }
