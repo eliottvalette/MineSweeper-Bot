@@ -10,35 +10,95 @@
 // ==/UserScript==
 
 // Do Not Touch This Structure
-// My Game Area
+//  My Game Area
 //  <div id="AreaBlock" class="pull-left">
-//    <div id="cell_0_0" class="cell size24 hdd_closed" data-x="0" data-y="0"></div>
-//    <div id="cell_1_0" class="cell size24 hdd_closed" data-x="1" data-y="0"></div>
-//    <div id="cell_2_0" class="cell size24 hdd_closed hdd_flag" data-x="2" data-y="0"></div>
-//    <div id="cell_3_0" class="cell size24 hdd_closed hdd_flag" data-x="3" data-y="0"></div>
-//    <div id="cell_4_0" class="cell size24 hdd_opened hdd_type1" data-x="4" data-y="0"></div>
-//    <div id="cell_5_0" class="cell size24 hdd_opened hdd_type0" data-x="5" data-y="0"></div>
-//    <div id="cell_6_0" class="cell size24 hdd_opened hdd_type0" data-x="6" data-y="0"></div>
-//    <div id="cell_7_0" class="cell size24 hdd_opened hdd_type0" data-x="7" data-y="0"></div>
-//    <div id="cell_8_0" class="cell size24 hdd_opened hdd_type0" data-x="8" data-y="0"></div>
+//    <div id="cell_0_0" class="cell size24 hdn_closed" data-x="0" data-y="0"></div>
+//    <div id="cell_1_0" class="cell size24 hdn_closed" data-x="1" data-y="0"></div>
+//    <div id="cell_2_0" class="cell size24 hdn_closed hdn_flag" data-x="2" data-y="0"></div>
+//    <div id="cell_3_0" class="cell size24 hdn_closed hdn_flag" data-x="3" data-y="0"></div>
+//    <div id="cell_4_0" class="cell size24 hdn_opened hdn_type1" data-x="4" data-y="0"></div>
+//    <div id="cell_5_0" class="cell size24 hdn_opened hdn_type0" data-x="5" data-y="0"></div>
+//    <div id="cell_6_0" class="cell size24 hdn_opened hdn_type0" data-x="6" data-y="0"></div>
+//    <div id="cell_7_0" class="cell size24 hdn_opened hdn_type0" data-x="7" data-y="0"></div>
+//    <div id="cell_8_0" class="cell size24 hdn_opened hdn_type0" data-x="8" data-y="0"></div>
 //    <div class="clear"></div>
 
-//    <div id="cell_0_1" class="cell size24 hdd_opened hdd_type2" data-x="0" data-y="1"></div>
-//    <div id="cell_1_1" class="cell size24 hdd_opened hdd_type2" data-x="1" data-y="1"></div>
-//    <div id="cell_2_1" class="cell size24 hdd_opened hdd_type2" data-x="2" data-y="1"></div>
-//    <div id="cell_3_1" class="cell size24 hdd_opened hdd_type1" data-x="3" data-y="1"></div>
-//    <div id="cell_4_1" class="cell size24 hdd_opened hdd_type1" data-x="4" data-y="1"></div>
-//    <div id="cell_5_1" class="cell size24 hdd_opened hdd_type0" data-x="5" data-y="1"></div>
-//    <div id="cell_6_1" class="cell size24 hdd_opened hdd_type0" data-x="6" data-y="1"></div>
-//    <div id="cell_7_1" class="cell size24 hdd_opened hdd_type0" data-x="7" data-y="1"></div>
-//    <div id="cell_8_1" class="cell size24 hdd_opened hdd_type0" data-x="8" data-y="1"></div>
+//    <div id="cell_0_1" class="cell size24 hdn_opened hdn_type2" data-x="0" data-y="1"></div>
+//    <div id="cell_1_1" class="cell size24 hdn_opened hdn_type2" data-x="1" data-y="1"></div>
+//    <div id="cell_2_1" class="cell size24 hdn_opened hdn_type2" data-x="2" data-y="1"></div>
+//    <div id="cell_3_1" class="cell size24 hdn_opened hdn_type1" data-x="3" data-y="1"></div>
+//    <div id="cell_4_1" class="cell size24 hdn_opened hdn_type1" data-x="4" data-y="1"></div>
+//    <div id="cell_5_1" class="cell size24 hdn_opened hdn_type0" data-x="5" data-y="1"></div>
+//    <div id="cell_6_1" class="cell size24 hdn_opened hdn_type0" data-x="6" data-y="1"></div>
+//    <div id="cell_7_1" class="cell size24 hdn_opened hdn_type0" data-x="7" data-y="1"></div>
+//    <div id="cell_8_1" class="cell size24 hdn_opened hdn_type0" data-x="8" data-y="1"></div>
 //    <div class="clear"></div>
 //    ...
 //  </div>
 
 
+// Do Not Touch This Structure
+//  My Opponent's Game Area
+//  <div id="AreaBlock_g2" class="pull-left">
+//      <div id="cell_0_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="0" data-y="0"></div>
+//      <div id="cell_1_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="1" data-y="0"></div>
+//      <div id="cell_2_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="2" data-y="0"></div>
+//      <div id="cell_3_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="3" data-y="0"></div>
+//      <div id="cell_4_0_g2" class="cell size28 hdn_opened hdn_type1" data-x="4" data-y="0"></div>
+//      <div id="cell_5_0_g2" class="cell size28 hdn_closed hdn_flag" data-x="5" data-y="0"></div>
+//      <div id="cell_6_0_g2" class="cell size28 hdn_opened hdn_type2" data-x="6" data-y="0"></div>
+//      <div id="cell_7_0_g2" class="cell size28 hdn_closed hdn_flag" data-x="7" data-y="0"></div>
+//      <div id="cell_8_0_g2" class="cell size28 hdn_opened hdn_type2" data-x="8" data-y="0"></div>
+//      <div id="cell_9_0_g2" class="cell size28 hdn_opened hdn_type1" data-x="9" data-y="0"></div>
+//      <div id="cell_10_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="10" data-y="0"></div>
+//      <div id="cell_11_0_g2" class="cell size28 hdn_opened hdn_type0" data-x="11" data-y="0"></div>
+//      <div id="cell_12_0_g2" class="cell size28 hdn_opened hdn_type1" data-x="12" data-y="0"></div>
+//      <div id="cell_13_0_g2" class="cell size28 hdn_opened hdn_type2" data-x="13" data-y="0"></div>
+//      <div id="cell_14_0_g2" class="cell size28 hdn_opened hdn_type3" data-x="14" data-y="0"></div>
+//      <div id="cell_15_0_g2" class="cell size28 hdn_opened hdn_type2" data-x="15" data-y="0"></div>
+//      <div class="clear"></div>
+//      <div id="cell_0_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="0" data-y="1"></div>
+//      <div id="cell_1_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="1" data-y="1"></div>
+//      <div id="cell_2_1_g2" class="cell size28 hdn_opened hdn_type0" data-x="2" data-y="1"></div>
+//      <div id="cell_3_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="3" data-y="1"></div>
+//      <div id="cell_4_1_g2" class="cell size28 hdn_opened hdn_type3" data-x="4" data-y="1"></div>
+//      <div id="cell_5_1_g2" class="cell size28 hdn_opened hdn_type3" data-x="5" data-y="1"></div>
+//      <div id="cell_6_1_g2" class="cell size28 hdn_opened hdn_type3" data-x="6" data-y="1"></div>
+//      <div id="cell_7_1_g2" class="cell size28 hdn_opened hdn_type2" data-x="7" data-y="1"></div>
+//      <div id="cell_8_1_g2" class="cell size28 hdn_closed hdn_flag" data-x="8" data-y="1"></div>
+//      <div id="cell_9_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="9" data-y="1"></div>
+//      <div id="cell_10_1_g2" class="cell size28 hdn_opened hdn_type0" data-x="10" data-y="1"></div>
+//      <div id="cell_11_1_g2" class="cell size28 hdn_opened hdn_type1" data-x="11" data-y="1"></div>
+//      <div id="cell_12_1_g2" class="cell size28 hdn_opened hdn_type2" data-x="12" data-y="1"></div>
+//      <div id="cell_13_1_g2" class="cell size28 hdn_closed hdn_flag" data-x="13" data-y="1"></div>
+//      <div id="cell_14_1_g2" class="cell size28 hdn_closed hdn_flag" data-x="14" data-y="1"></div>
+//      <div id="cell_15_1_g2" class="cell size28 hdn_closed hdn_flag" data-x="15" data-y="1"></div>
+//      <div class="clear"></div>
+
+
+
 (function() {
     'use strict';
+
+    let g2_usage = true;
+
+    function changeStyle(el, button) {
+        if (button === 0) { // change cell style into red
+            if (el.style.backgroundColor !== 'rgba(255, 0, 0, 0.7)' || el.style.border !== '2px solid red') {
+                el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+                el.style.border = '2px solid red';
+                el.style.zIndex = '1000';
+                el.style.pointerEvents = 'auto';
+            }
+        } else { // change cell style into green
+            if (el.style.backgroundColor !== 'rgba(0, 255, 0, 0.7)' || el.style.border !== '2px solid green') {
+                el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
+                el.style.border = '2px solid green';
+                el.style.zIndex = '1000';
+                el.style.pointerEvents = 'none';
+            }
+        }
+    }
 
     function initializeInterface() {
         const interfaceContainer = document.createElement('div');
@@ -46,8 +106,8 @@
             <style>
                 .nexus-interface {
                     position: fixed;
-                    right: 10px;
-                    top: 100px;
+                    left: 10px;
+                    bottom: 100px;
                     z-index: 999;
                     display: flex;
                     flex-direction: column;
@@ -79,41 +139,50 @@
                 }
             </style>
             <div class="nexus-interface">
-                <button id="debutant"> Go Debutant </button>
-                <button id="intermediaire"> Go Intermediaire </button>
-                <button id="expert"> Go Expert </button>
                 <button id="areaBlock"> Area Block </button>
+                <button id="areaBlock_g2"> Area Block G2 </button>
+                <button id="toggle_g2"> Turn G2 Off </button>
                 <button id="solve"> Solve </button>
+                <button id="log"> Log Advanced Deductions Calculationq </button>
             </div>
         `;
         document.body.appendChild(interfaceContainer);
 
-        // Add click handlers for buttons using proper CSS selectors
-        document.getElementById('debutant').addEventListener('click', () => {
-            const targetElement = document.querySelector('.level1-link');
-            if (targetElement) targetElement.click();
-        });
-
-        document.getElementById('intermediaire').addEventListener('click', () => {
-            const targetElement = document.querySelector('.level2-link');
-            if (targetElement) targetElement.click();
-        });
-
-        document.getElementById('expert').addEventListener('click', () => {
-            const targetElement = document.querySelector('.level3-link');
-            if (targetElement) targetElement.click();
-        });
-
         document.getElementById('areaBlock').addEventListener('click', () => {
-            const game = document.getElementById('game');
-            if (game) interpretGameBlock(game);
+            const areaBlock = document.getElementById('AreaBlock');
+            if (areaBlock) {
+                const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                console.log(areaBlockMatrix);
+            }
+        });
+
+        document.getElementById('areaBlock_g2').addEventListener('click', () => {
+            const areaBlock = document.getElementById('AreaBlock_g2');
+            if (areaBlock) {
+                const areaBlockMatrix = interpretOpponentAreaBlock(areaBlock);
+                console.log(areaBlockMatrix);
+            }
+        });
+
+        document.getElementById('toggle_g2').addEventListener('click', () => {
+            g2_usage = !g2_usage;
+            document.getElementById('toggle_g2').textContent = g2_usage ? 'Turn G2 Off' : 'Turn G2 On';
+            console.log('g2_usage', g2_usage);
         });
 
         document.getElementById('solve').addEventListener('click', () => {
-            const game = document.getElementById('game');
-            if (game) {
-                const areaBlockMatrix = interpretAreaBlock(game);
+            const areaBlock = document.getElementById('AreaBlock');
+            if (areaBlock) {
+                const areaBlockMatrix = interpretAreaBlock(areaBlock);
                 solveAreaBlock(areaBlockMatrix);
+            }
+        });
+
+        document.getElementById('log').addEventListener('click', () => {
+            const areaBlock = document.getElementById('AreaBlock');
+            if (areaBlock) {
+                const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                advancedDeductions(areaBlockMatrix, true);
             }
         });
     }
@@ -122,23 +191,35 @@
         if (!areaBlock) return null;
 
         const cells = areaBlock.querySelectorAll('.cell');
+        let maxRow = 0, maxCol = 0;
+
+        cells.forEach(cell => {
+            const [cellStr, colStr, rowStr] = cell.id.split('_');
+            const row = parseInt(rowStr, 10);
+            const col = parseInt(colStr, 10);
+            if (row > maxRow) maxRow = row;
+            if (col > maxCol) maxCol = col;
+        });
+
+        maxRow++;
+        maxCol++;
+
         const cellsArray = Array.from(cells);
-        const areaBlockMatrix = Array(9).fill().map(() => Array(9).fill(0));
+        const areaBlockMatrix = Array(maxRow).fill().map(() => Array(maxCol).fill(0));
 
-        for (let i = 0; i < 9; i++) {
-            for (let j = 0; j < 9; j++) {
-                const cell = cellsArray[i * 9 + j];
+        for (let i = 0; i < maxRow; i++) {
+            for (let j = 0; j < maxCol; j++) {
+                const cell = cellsArray[i * maxCol + j];
                 if (!cell) continue;
-
-                if (cell.classList.contains('hdd_closed')) {
-                    if (cell.classList.contains('hdd_flag')) {
+                if (cell.classList.contains('hdn_closed')) {
+                    if (cell.classList.contains('hdn_flag') || cell.style.backgroundColor === 'rgba(0, 255, 0, 0.7)') {
                         areaBlockMatrix[i][j] = 'X';
                     } else {
                         areaBlockMatrix[i][j] = -1;
                     }
-                } else if (cell.classList.contains('hdd_opened')) {
-                    for (let k = 0; k < 9; k++) {
-                        if (cell.classList.contains(`hdd_type${k}`)) {
+                } else if (cell.classList.contains('hdn_opened')) {
+                    for (let k = 0; k < maxCol; k++) {
+                        if (cell.classList.contains(`hdn_type${k}`)) {
                             areaBlockMatrix[i][j] = k;
                             break;
                         }
@@ -146,50 +227,90 @@
                 }
             }
         }
-        console.log(areaBlockMatrix);
+        return areaBlockMatrix;
+    }
+
+    function interpretOpponentAreaBlock(areaBlock) {
+        if (!areaBlock) return null;
+
+        const cells = areaBlock.querySelectorAll('.cell');
+        let maxRow = 0, maxCol = 0;
+
+        cells.forEach(cell => {
+            const [cellStr, colStr, rowStr] = cell.id.split('_');
+            const row = parseInt(rowStr, 10);
+            const col = parseInt(colStr, 10);
+            if (row > maxRow) maxRow = row;
+            if (col > maxCol) maxCol = col;
+        });
+
+        maxRow++;
+        maxCol++;
+
+        const cellsArray = Array.from(cells);
+        const areaBlockMatrix = Array(maxRow).fill().map(() => Array(maxCol).fill(0));
+
+        for (let i = 0; i < maxRow; i++) {
+            for (let j = 0; j < maxCol; j++) {
+                const cell = cellsArray[i * maxCol + j];
+                if (!cell) continue;
+                if (cell.id.includes('g2')) {
+                    if (cell.classList.contains('hdn_closed')) {
+                        if (cell.classList.contains('hdn_flag')) {
+                            areaBlockMatrix[i][j] = 'X';
+                        } else {
+                            areaBlockMatrix[i][j] = -1;
+                        }
+                    } else if (cell.classList.contains('hdn_opened')) {
+                        for (let k = 0; k < maxCol; k++) {
+                            if (cell.classList.contains(`hdn_type${k}`)) {
+                                areaBlockMatrix[i][j] = k;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         return areaBlockMatrix;
     }
 
     function countHiddenAround(areaBlockMatrix, i, j) {
-        if (!areaBlockMatrix || i < 0 || j < 0 || i >= 9 || j >= 9) {
+        if (!areaBlockMatrix || i < 0 || j < 0 || i >= areaBlockMatrix.length || j >= areaBlockMatrix[0].length) {
             return { hiddenCount: 0, minesCount: 0 };
         }
-
+        const height = areaBlockMatrix.length;
+        const width = areaBlockMatrix[0].length;
         let hiddenCount = 0;
         let minesCount = 0;
-
         for (let k = -1; k <= 1; k++) {
             for (let l = -1; l <= 1; l++) {
                 const newI = i + k;
                 const newJ = j + l;
-
-                if (newI >= 0 && newI < 9 && newJ >= 0 && newJ < 9) {
-                    if (areaBlockMatrix[newI][newJ] === -1) {
-                        hiddenCount++;
-                    } else if (areaBlockMatrix[newI][newJ] === 'X') {
-                        minesCount++;
-                    }
+                if (newI < 0 || newI >= height || newJ < 0 || newJ >= width) continue;
+                if (areaBlockMatrix[newI][newJ] === -1) {
+                    hiddenCount++;
+                } else if (areaBlockMatrix[newI][newJ] === 'X') {
+                    minesCount++;
                 }
             }
         }
         return { hiddenCount, minesCount };
     }
 
-    function clickCellsAround(areaBlockMatrix, i, j, flag) {
-        if (!areaBlockMatrix || i < 0 || j < 0 || i >= 9 || j >= 9) return;
-
+    function changeStyleCellsAround(areaBlockMatrix, i, j, flag) {
+        if (!areaBlockMatrix || i < 0 || j < 0 || i >= areaBlockMatrix.length || j >= areaBlockMatrix[0].length) return;
+        const height = areaBlockMatrix.length;
+        const width = areaBlockMatrix[0].length;
         for (let k = -1; k <= 1; k++) {
             for (let l = -1; l <= 1; l++) {
                 const newI = i + k;
                 const newJ = j + l;
-
-                if (newI >= 0 && newI < 9 && newJ >= 0 && newJ < 9) {
-                    console.log(`areaBlockMatrix[${newI}][${newJ}] = ${areaBlockMatrix[newI][newJ]}`);
+                if (newI >= 0 && newI < height && newJ >= 0 && newJ < width) {
                     if (areaBlockMatrix[newI][newJ] === -1) {
                         const cell = document.querySelector(`#cell_${newJ}_${newI}`);
                         if (cell) {
-                            dispatchClick(cell, flag ? 2 : 0);
-                            console.log(`clicked cell ${newJ}_${newI}`);
+                            changeStyle(cell, flag ? 2 : 0);
                         }
                     }
                 }
@@ -197,39 +318,289 @@
         }
     }
 
-    function solveAreaBlock(areaBlockMatrix) {
+    function advancedDeductions(area, log = false) {
+        const H = area.length, W = area[0].length, MAX = 4;
+
+        /* 1) collecte des équations (“numéro” → inconnues, mines restantes) */
+        const eqs = [];
+        for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+            const v = area[r][c];
+            if (v <= 0) continue;
+            const unknown = [], flags = [];
+            for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+                if (!dr && !dc) continue;
+                const nr = r + dr, nc = c + dc;
+                if (nr < 0 || nr >= H || nc < 0 || nc >= W) continue;
+                const n = area[nr][nc];
+                if (n === -1) unknown.push([nr, nc]);
+                else if (n === 'X') flags.push([nr, nc]);
+            }
+            const rest = v - flags.length;
+            if (unknown.length && rest >= 0)
+                eqs.push({ cells: unknown, mines: rest });
+        }
+        if (!eqs.length) return;
+
+        if (log) {
+            console.log('eqs', eqs);
+        }
+
+
+        /* 2) génère des groupes de taille ≤ MAX : (i) chaque équation seule,
+            (ii) union de deux équations si ça tient dans MAX.             */
+        const groupKeys = new Set();                 // évite doublons
+        const groups = [];
+
+        const pushGroup = (cellsArr) => {
+            if (cellsArr.length === 0 || cellsArr.length > MAX) return;
+            const key = cellsArr.map(([r, c]) => `${r}_${c}`).sort().join('|');
+            if (groupKeys.has(key)) return;
+            groupKeys.add(key);
+            groups.push(cellsArr);
+        };
+
+        eqs.forEach(eq => pushGroup(eq.cells));
+
+        for (let i = 0; i < eqs.length; i++) {
+            for (let j = i + 1; j < eqs.length; j++) {
+                const union = [...eqs[i].cells, ...eqs[j].cells];
+                /* retire doublons */
+                const uniq = [];
+                const seen = new Set();
+                union.forEach(([r, c]) => {
+                    const k = `${r}_${c}`;
+                    if (!seen.has(k)) { uniq.push([r, c]); seen.add(k); }
+                });
+                pushGroup(uniq);
+            }
+        }
+
+        if (log) {
+            console.log('groups', groups);
+        }
+
+        /* 3) énumération sur chaque groupe */
+        const sureMine = new Set(), sureSafe = new Set();
+
+        groups.forEach(group => {
+            const n = group.length;
+            const idx = new Map(group.map((p, i) => [`${p[0]}_${p[1]}`, i]));
+            const allMine = Array(n).fill(true), allSafe = Array(n).fill(true);
+
+            outer: for (let mask = 0; mask < (1 << n); mask++) {
+                for (const { cells, mines } of eqs) {
+                    /* compte mines assignées À L’INTÉRIEUR du groupe       */
+                    let inside = 0, outsideUnknown = 0;
+                    cells.forEach(([r, c]) => {
+                        const k = `${r}_${c}`;
+                        if (idx.has(k)) {
+                            if (mask & (1 << idx.get(k))) inside++;
+                        } else {
+                            if (area[r][c] === -1) outsideUnknown++;   // inconnue hors groupe
+                        }
+                    });
+                    const minPossible = inside;                       // si tout le reste est safe
+                    const maxPossible = inside + outsideUnknown;      // si tout le reste est mine
+                    if (mines <  minPossible || mines > maxPossible)
+                        continue outer;                                // masque incompatible
+                }
+                /* masque compatible → met à jour les certitudes          */
+                for (let i = 0; i < n; i++) {
+                    if (mask & (1 << i)) allSafe[i] = false;
+                    else                 allMine[i] = false;
+                }
+            }
+
+            allMine.forEach((m, i) => {
+                if (!m) return;
+                sureMine.add(`${group[i][0]}_${group[i][1]}`);
+            });
+            allSafe.forEach((s, i) => {
+                if (!s) return;
+                sureSafe.add(`${group[i][0]}_${group[i][1]}`);
+            });
+        });
+
+        if (log) {
+            console.log('sureMine', sureMine);
+            console.log('sureSafe', sureSafe);
+        }
+
+        /* 4) coloration (identique à l’ancienne version) */
+        sureMine.forEach(k => {
+            const [r, c] = k.split('_').map(Number);
+            const el = document.querySelector(`#cell_${c}_${r}`);
+            if (el && el.classList.contains('hdn_closed')) {
+                changeStyle(el, 1)
+            };
+        });
+        sureSafe.forEach(k => {
+            const [r, c] = k.split('_').map(Number);
+            const el = document.querySelector(`#cell_${c}_${r}`);
+            if (el && el.classList.contains('hdn_closed')) {
+                changeStyle(el, 0);
+            };
+        });
+    }
+
+    async function solveAreaBlock(areaBlockMatrix) {
         if (!areaBlockMatrix) return;
+        const height = areaBlockMatrix.length;
+        const width = areaBlockMatrix[0].length;
+        let count = 0;
+        let handMode = false;
 
-        let changed = true;
-        while (changed) {
-            changed = false;
-            // 1. Click safe cells if all mines are already flagged
-            for (let i = 0; i < 9; i++) {
-                for (let j = 0; j < 9; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
-                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                        console.log(`areaBlockMatrix[${i}][${j}] = ${areaBlockMatrix[i][j]} coordinates: ${i}, ${j}`);
-                        console.log(`hiddenCount: ${hiddenCount}, minesCount: ${minesCount}`);
-                        if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
-                            clickCellsAround(areaBlockMatrix, i, j, false);
-                            changed = true;
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                const cell = document.querySelector(`#cell_${j}_${i}`);
+                if (cell) {
+                    cell.style.backgroundColor = '';
+                    cell.style.border = '';
+                }
+            }
+        }
+
+        let areaBlockMatrix_g2 = null;
+        if (document.getElementById('AreaBlock_g2')) {
+            areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
+        }
+
+        while (true) {
+            // 0. Check if all cells are closed
+            let allClosed = true;
+            for (let i = 0; i < height; i++) {
+                for (let j = 0; j < width; j++) {
+                    const cell = document.querySelector(`#cell_${j}_${i}`);
+                    if (cell && !cell.classList.contains('hdn_closed')) {
+                        allClosed = false;
+                        break;
+                    }
+                }
+                if (!allClosed) break;
+            }
+            if (allClosed) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell) {
+                            cell.style.pointerEvents = 'auto';
+                        }
+                    }
+                }
+                return; // Exit the async function if all cells are closed
+            } else {
+                // Set all closed cells to not clickable
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell && cell.classList.contains('hdn_closed')) {
+                            cell.style.pointerEvents = 'none';
+                        }
+                    }
+                }
+                // Set only red closed cells to clickable
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell && cell.classList.contains('hdn_closed') && cell.style.backgroundColor === 'rgba(255, 0, 0, 0.7)') {
+                            cell.style.pointerEvents = 'auto';
                         }
                     }
                 }
             }
-            // 2. Flag mines if all hidden cells must be mines
-            for (let i = 0; i < 9; i++) {
-                for (let j = 0; j < 9; j++) {
-                    if (areaBlockMatrix[i][j] > 0) {
-                        const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
 
-                        if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
-                            clickCellsAround(areaBlockMatrix, i, j, true);
-                            changed = true;
+            // 1. Once in a while, remove the added style for opened cells
+            if (Math.random() < 0.01) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell) {
+                            cell.style.backgroundColor = '';
+                            cell.style.border = '';
+                            cell.style.pointerEvents = 'auto';
                         }
                     }
                 }
             }
+
+            // 2. If Cell is opened, remove the added style for opened cells
+            if (handMode) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > -1) {
+                            const cell = document.querySelector(`#cell_${j}_${i}`);
+                            if (cell) {
+                                cell.style.backgroundColor = '';
+                                cell.style.border = '';
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Look for the cells that are opened in the opponent's area block
+            if (g2_usage && areaBlockMatrix_g2) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix_g2[i][j] >=0 && areaBlockMatrix[i][j] === -1) {
+                            const cell = document.querySelector(`#cell_${j}_${i}`);
+                            if (cell) {
+                                changeStyle(cell, 0);
+                                areaBlockMatrix_g2[i][j] = areaBlockMatrix_g2[i][j];
+                            }
+                        } else if (areaBlockMatrix_g2[i][j] === 'X' && areaBlockMatrix[i][j] === -1) {
+                            areaBlockMatrix[i][j] = 'X';
+                            const cell = document.querySelector(`#cell_${j}_${i}`);
+                            if (cell) {
+                                changeStyle(cell, 1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Click safe cells if all mines are already flagged
+            if (handMode) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > 0) {
+                            const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                            if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
+                                changeStyleCellsAround(areaBlockMatrix, i, j, false);
+                                areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. Flag mines if all hidden cells must be mines
+            if (handMode) {
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > 0) {
+                            const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                            if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
+                                changeStyleCellsAround(areaBlockMatrix, i, j, true);
+                                areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 6. Advanced deductions
+            advancedDeductions(areaBlockMatrix);
+
+            // Re-interpret the board after each round
+            areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+
+            if (document.getElementById('AreaBlock_g2') && g2_usage) {
+                areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
+            }
+            count++;
+
+            await new Promise(resolve => setTimeout(resolve, 60));
         }
     }
 

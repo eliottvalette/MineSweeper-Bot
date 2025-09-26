@@ -80,17 +80,23 @@
 (function() {
     'use strict';
 
-    let g2_usage = true;
+    let botEnabled = true;
 
     function changeStyle(el, button) {
         if (button === 0) { // change cell style into red
-            el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-            el.style.border = '2px solid red';
-            el.style.zIndex = '1000';
+            if (el.style.backgroundColor !== 'rgba(255, 0, 0, 0.7)' || el.style.border !== '2px solid red') {
+                el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+                el.style.border = '2px solid red';
+                el.style.zIndex = '1000';
+                el.style.pointerEvents = 'auto';
+            }
         } else { // change cell style into green
-            el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
-            el.style.border = '2px solid green';
-            el.style.zIndex = '1000';
+            if (el.style.backgroundColor !== 'rgba(0, 255, 0, 0.7)' || el.style.border !== '2px solid green') {
+                el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
+                el.style.border = '2px solid green';
+                el.style.zIndex = '1000';
+                el.style.pointerEvents = 'none';
+            }
         }
     }
 
@@ -134,9 +140,9 @@
             </style>
             <div class="nexus-interface">
                 <button id="areaBlock"> Area Block </button>
-                <button id="areaBlock_g2"> Area Block G2 </button>
-                <button id="toggle_g2"> Toggle G2 Usage </button>
+                <button id="toggleBot"> Disable Bot </button>
                 <button id="solve"> Solve </button>
+                <button id="log"> Log Advanced Deductions Calculationq </button>
             </div>
         `;
         document.body.appendChild(interfaceContainer);
@@ -149,16 +155,22 @@
             }
         });
 
-        document.getElementById('areaBlock_g2').addEventListener('click', () => {
-            const areaBlock = document.getElementById('AreaBlock_g2');
+        document.getElementById('toggleBot').addEventListener('click', () => {
+            botEnabled = !botEnabled;
+            document.getElementById('toggleBot').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
+            
+            // Make all cells clickable when bot is disabled
+            const areaBlock = document.getElementById('AreaBlock');
             if (areaBlock) {
-                const areaBlockMatrix = interpretOpponentAreaBlock(areaBlock);
-                console.log(areaBlockMatrix);
+                const cells = areaBlock.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    console.log('before cell', cell.style.pointerEvents);
+                    cell.style.pointerEvents = 'auto'
+                    console.log('after cell', cell.style.pointerEvents);
+                });
             }
-        });
-
-        document.getElementById('toggle_g2').addEventListener('click', () => {
-            g2_usage = !g2_usage;
+            
+            console.log('botEnabled', botEnabled);
         });
 
         document.getElementById('solve').addEventListener('click', () => {
@@ -166,6 +178,14 @@
             if (areaBlock) {
                 const areaBlockMatrix = interpretAreaBlock(areaBlock);
                 solveAreaBlock(areaBlockMatrix);
+            }
+        });
+
+        document.getElementById('log').addEventListener('click', () => {
+            const areaBlock = document.getElementById('AreaBlock');
+            if (areaBlock) {
+                const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                advancedDeductions(areaBlockMatrix, true);
             }
         });
     }
@@ -195,7 +215,7 @@
                 const cell = cellsArray[i * maxCol + j];
                 if (!cell) continue;
                 if (cell.classList.contains('hdn_closed')) {
-                    if (cell.classList.contains('hdn_flag')) {
+                    if (cell.classList.contains('hdn_flag') || cell.style.backgroundColor === 'rgba(0, 255, 0, 0.7)') {
                         areaBlockMatrix[i][j] = 'X';
                     } else {
                         areaBlockMatrix[i][j] = -1;
@@ -213,50 +233,6 @@
         return areaBlockMatrix;
     }
 
-    function interpretOpponentAreaBlock(areaBlock) {
-        if (!areaBlock) return null;
-
-        const cells = areaBlock.querySelectorAll('.cell');
-        let maxRow = 0, maxCol = 0;
-
-        cells.forEach(cell => {
-            const [cellStr, colStr, rowStr] = cell.id.split('_');
-            const row = parseInt(rowStr, 10);
-            const col = parseInt(colStr, 10);
-            if (row > maxRow) maxRow = row;
-            if (col > maxCol) maxCol = col;
-        });
-
-        maxRow++;
-        maxCol++;
-
-        const cellsArray = Array.from(cells);
-        const areaBlockMatrix = Array(maxRow).fill().map(() => Array(maxCol).fill(0));
-
-        for (let i = 0; i < maxRow; i++) {
-            for (let j = 0; j < maxCol; j++) {
-                const cell = cellsArray[i * maxCol + j];
-                if (!cell) continue;
-                if (cell.id.includes('g2')) {
-                    if (cell.classList.contains('hdn_closed')) {
-                        if (cell.classList.contains('hdn_flag')) {
-                            areaBlockMatrix[i][j] = 'X';
-                        } else {
-                            areaBlockMatrix[i][j] = -1;
-                        }
-                    } else if (cell.classList.contains('hdn_opened')) {
-                        for (let k = 0; k < maxCol; k++) {
-                            if (cell.classList.contains(`hdn_type${k}`)) {
-                                areaBlockMatrix[i][j] = k;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return areaBlockMatrix;
-    }
 
     function countHiddenAround(areaBlockMatrix, i, j) {
         if (!areaBlockMatrix || i < 0 || j < 0 || i >= areaBlockMatrix.length || j >= areaBlockMatrix[0].length) {
@@ -301,8 +277,8 @@
         }
     }
 
-    function advancedDeductions(area) {
-        const H = area.length, W = area[0].length, MAX = 8;
+    function advancedDeductions(area, log = false) {
+        const H = area.length, W = area[0].length, MAX = 4;
 
         /* 1) collecte des équations (“numéro” → inconnues, mines restantes) */
         const eqs = [];
@@ -323,6 +299,11 @@
                 eqs.push({ cells: unknown, mines: rest });
         }
         if (!eqs.length) return;
+
+        if (log) {
+            console.log('eqs', eqs);
+        }
+
 
         /* 2) génère des groupes de taille ≤ MAX : (i) chaque équation seule,
             (ii) union de deux équations si ça tient dans MAX.             */
@@ -351,6 +332,10 @@
                 });
                 pushGroup(uniq);
             }
+        }
+
+        if (log) {
+            console.log('groups', groups);
         }
 
         /* 3) énumération sur chaque groupe */
@@ -395,6 +380,11 @@
             });
         });
 
+        if (log) {
+            console.log('sureMine', sureMine);
+            console.log('sureSafe', sureSafe);
+        }
+
         /* 4) coloration (identique à l’ancienne version) */
         sureMine.forEach(k => {
             const [r, c] = k.split('_').map(Number);
@@ -429,51 +419,54 @@
             }
         }
 
-        let areaBlockMatrix_g2 = null;
-        if (document.getElementById('AreaBlock_g2')) {
-            areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
-        }
 
-        while (true) {
-
-            if (Math.random() < 0.01) {
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        const cell = document.querySelector(`#cell_${j}_${i}`);
-                        if (cell) {
-                            cell.style.backgroundColor = '';
-                            cell.style.border = '';
-                        }
-                    }
-                }
-            }
-
-            // 1. If all cells are closed, remove the added style for opened cells
+        while (true && botEnabled) {
+            // 0. Check if all cells are closed
             let allClosed = true;
             for (let i = 0; i < height; i++) {
                 for (let j = 0; j < width; j++) {
-                    if (areaBlockMatrix[i][j] !== -1) {
+                    const cell = document.querySelector(`#cell_${j}_${i}`);
+                    if (cell && !cell.classList.contains('hdn_closed')) {
                         allClosed = false;
                         break;
                     }
                 }
                 if (!allClosed) break;
             }
-
             if (allClosed) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         const cell = document.querySelector(`#cell_${j}_${i}`);
                         if (cell) {
-                            cell.style.backgroundColor = '';
-                            cell.style.border = '';
+                            cell.style.pointerEvents = 'auto';
+                        }
+                    }
+                }
+                return; // Exit the async function if all cells are closed
+            } else {
+                // Set all closed cells to not clickable
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell && cell.classList.contains('hdn_closed')) {
+                            cell.style.pointerEvents = 'none';
+                        }
+                    }
+                }
+                // Set only red closed cells to clickable
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const cell = document.querySelector(`#cell_${j}_${i}`);
+                        if (cell && cell.classList.contains('hdn_closed') && cell.style.backgroundColor === 'rgba(255, 0, 0, 0.7)') {
+                            cell.style.pointerEvents = 'auto';
                         }
                     }
                 }
             }
 
+
             // 2. If Cell is opened, remove the added style for opened cells
-            if (handMode) {
+            if (botEnabled) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         if (areaBlockMatrix[i][j] > -1) {
@@ -486,29 +479,10 @@
                     }
                 }
             }
-            // 3. Look for the cells that are opened in the opponent's area block
-            if (g2_usage && areaBlockMatrix_g2 && handMode) {
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        if (!(areaBlockMatrix[i][j] > -1 || areaBlockMatrix[i][j] === 'X' || areaBlockMatrix_g2[i][j] === -1)) {
-                            if (areaBlockMatrix_g2[i][j] === 'X') {
-                                const cell = document.querySelector(`#cell_${j}_${i}`);
-                                if (cell) {
-                                    changeStyle(cell, 1);
-                                }
-                            } else {
-                                const cell = document.querySelector(`#cell_${j}_${i}`);
-                                if (cell) {
-                                    changeStyle(cell, 0);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+
 
             // 4. Click safe cells if all mines are already flagged
-            if (handMode) {
+            if (botEnabled) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         if (areaBlockMatrix[i][j] > 0) {
@@ -523,7 +497,7 @@
             }
 
             // 5. Flag mines if all hidden cells must be mines
-            if (handMode) {
+            if (botEnabled) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         if (areaBlockMatrix[i][j] > 0) {
@@ -534,20 +508,20 @@
                             }
                         }
                     }
-                }       
-            }  
+                }
+            }
 
             // 6. Advanced deductions
-            advancedDeductions(areaBlockMatrix);
+            if (botEnabled) {
+                advancedDeductions(areaBlockMatrix);
+            }
 
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
-            if (document.getElementById('AreaBlock_g2')) {
-                areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
-            }
+
             count++;
 
-            await new Promise(resolve => setTimeout(resolve, 600));
+            await new Promise(resolve => setTimeout(resolve, 60));
         }
     }
 
