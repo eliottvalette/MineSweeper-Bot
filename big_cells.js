@@ -87,14 +87,104 @@
     const HOT_TOP  = 200;     // px depuis le haut
     const HOT_SIZE = 48;      // largeur/hauteur des cellules empilées
 
+    const TARGET_COL = 8.5;
+    const TARGET_ROW = 12.5;
+
+    let probeCell = null; // cellule "sonde" quand plus aucune rouge
+
     /** Ensemble des cellules "rouges" actuellement cliquables */
     const redCells = new Set();
 
-    function getCellRank(el) {
-        // On privilégie data-x / data-y s'ils existent (plus fiable)
+    // distance^2 au point cible (évite sqrt)
+    function distance2ToTarget(el) {
         const col = parseInt(el.getAttribute('data-x') ?? el.id.split('_')[1], 10);
         const row = parseInt(el.getAttribute('data-y') ?? el.id.split('_')[2], 10);
-        return Math.sqrt(col - 8.5) ** 2 + Math.sqrt(row - 12.5) ** 2;
+        const dx = col - TARGET_COL, dy = row - TARGET_ROW;
+        return dx*dx + dy*dy;
+    }
+
+    // trouve la cellule fermée non verte la plus proche de (8.5,12.5)
+    function findClosestClosedNonGreenCell() {
+        const areaBlock = document.getElementById('AreaBlock');
+        if (!areaBlock) return null;
+        const candidates = Array.from(areaBlock.querySelectorAll('.cell.hdn_closed:not(.hdn_flag)'));
+        let best = null, bestD2 = Infinity;
+
+        for (const el of candidates) {
+            // exclure explicitement les vertes (style inline posé par le bot)
+            const isGreen = el.style.backgroundColor === 'rgba(0, 255, 0, 0.7)' || el.style.border === '2px solid green';
+            if (isGreen) continue;
+
+            const d2 = distance2ToTarget(el);
+            if (d2 < bestD2) { bestD2 = d2; best = el; }
+        }
+        return best;
+    }
+
+    // place une cellule au hot spot et arme le "mode sonde"
+    function armProbeMode(cell) {
+        // nettoyer toute pile rouge
+        redCells.forEach(el => resetCellLayout(el));
+        redCells.clear();
+
+        // désactiver les clics partout, sauf la sonde
+        const areaBlock = document.getElementById('AreaBlock');
+        if (areaBlock) {
+            areaBlock.querySelectorAll('.cell').forEach(c => { c.style.pointerEvents = 'none'; });
+        }
+
+        // styliser la sonde (ne PAS la colorer en vert)
+        probeCell = cell;
+        probeCell.style.position = 'fixed';
+        probeCell.style.left = HOT_LEFT + 'px';
+        probeCell.style.top  = HOT_TOP  + 'px';
+        probeCell.style.width  = HOT_SIZE + 'px';
+        probeCell.style.height = HOT_SIZE + 'px';
+        probeCell.style.margin = '0';
+        probeCell.style.transform = 'none';
+        probeCell.style.boxSizing = 'border-box';
+        probeCell.style.zIndex = '20000';
+        probeCell.style.pointerEvents = 'auto';
+
+        // désactiver le bot (UI + état)
+        botEnabled = false;
+        const tb = document.getElementById('toggleBot');
+        if (tb) tb.textContent = 'Enable Bot';
+
+        // au 1er clic sur la sonde : on réactive le bot et on relance solve
+        const onProbeClick = () => {
+            // petite remise à zéro du layout de la sonde
+            resetCellLayout(probeCell);
+            probeCell = null;
+
+            // réactiver les clics par défaut
+            if (areaBlock) {
+                areaBlock.querySelectorAll('.cell').forEach(c => { c.style.pointerEvents = ''; });
+            }
+
+            botEnabled = true;
+            if (tb) tb.textContent = 'Disable Bot';
+
+            // relancer immédiatement le solve sur l'état courant
+            const ab = document.getElementById('AreaBlock');
+            if (ab) {
+                const m = interpretAreaBlock(ab);
+                // relance asynchrone pour sortir proprement du contexte du click
+                setTimeout(() => solveAreaBlock(m), 0);
+            }
+
+            // enlever ce listener "one-shot"
+            probeCell?.removeEventListener('click', onProbeClick, true);
+        };
+        // capture en phase "true" pour être sûr de passer avant le site
+        probeCell.addEventListener('click', onProbeClick, true);
+    }
+
+    function getCellRank(el) {
+        const col = parseInt(el.getAttribute('data-x') ?? el.id.split('_')[1], 10);
+        const row = parseInt(el.getAttribute('data-y') ?? el.id.split('_')[2], 10);
+        const distance = Math.sqrt(col - 8.5) ** 2 + Math.sqrt(row - 12.5) ** 2;
+        return 1 / distance;
     }
 
     /** Positionne toutes les cellules rouges exactement au même point (pile) */
@@ -112,7 +202,7 @@
             el.style.margin = '0';
             el.style.transform = 'none';
             el.style.boxSizing = 'border-box';
-            el.style.zIndex = String(10000 + i); // i croît avec le rank → au-dessus
+            el.style.zIndex = String(100 + i); // i croît avec le rank → au-dessus
             el.style.pointerEvents = 'auto';
         });
     }
@@ -208,7 +298,7 @@
         document.getElementById('toggleBot').addEventListener('click', () => {
             botEnabled = !botEnabled;
             document.getElementById('toggleBot').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
-            
+
             // Make all cells clickable when bot is disabled
             const areaBlock = document.getElementById('AreaBlock');
             if (areaBlock) {
@@ -217,13 +307,17 @@
                     cell.style.pointerEvents = 'auto'
                 });
             }
-            
+
             // Clean up red cells when disabling bot
             if (!botEnabled) {
                 redCells.forEach(el => resetCellLayout(el));
                 redCells.clear();
+                if (probeCell) {
+                    resetCellLayout(probeCell);
+                    probeCell = null;
+                }
             }
-            
+
             console.log('botEnabled', botEnabled);
         });
 
@@ -291,7 +385,7 @@
                 e.preventDefault();
                 botEnabled = !botEnabled;
                 document.getElementById('toggleBot').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
-                
+
                 // Make all cells clickable when bot is disabled
                 const areaBlock = document.getElementById('AreaBlock');
                 if (areaBlock) {
@@ -300,13 +394,17 @@
                         cell.style.pointerEvents = 'auto'
                     });
                 }
-                
+
                 // Clean up red cells when disabling bot
                 if (!botEnabled) {
                     redCells.forEach(el => resetCellLayout(el));
                     redCells.clear();
+                    if (probeCell) {
+                        resetCellLayout(probeCell);
+                        probeCell = null;
+                    }
                 }
-                
+
                 // If bot is enabled, automatically click solve
                 if (botEnabled) {
                     const areaBlock = document.getElementById('AreaBlock');
@@ -315,7 +413,7 @@
                         solveAreaBlock(areaBlockMatrix);
                     }
                 }
-                
+
                 console.log('botEnabled', botEnabled);
             }
         });
@@ -663,6 +761,15 @@
 
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+
+            // Si plus aucune rouge, passer en "mode sonde"
+            if (redCells.size === 0) {
+                const candidate = findClosestClosedNonGreenCell();
+                if (candidate) {
+                    armProbeMode(candidate);
+                    return; // on laisse le click de la sonde relancer solve
+                }
+            }
 
             count++;
 
