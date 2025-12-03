@@ -97,6 +97,7 @@
         } else { // cellule à ignorer/flag => VERT (bomb)
             el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
             el.style.border = '2px solid green';
+            el.style.pointerEvents = 'none';
             if (redCells.has(el)) {
                 redCells.delete(el);
             }
@@ -150,43 +151,6 @@
         }
     }
 
-    // Simule l'appui de la touche "F" (flag)
-    function simulateKeyF() {
-        const keyDownEvent = new KeyboardEvent('keydown', {
-            key: 'f',
-            code: 'KeyF',
-            keyCode: 70,
-            which: 70,
-            bubbles: true,
-            cancelable: true
-        });
-        document.dispatchEvent(keyDownEvent);
-        
-        // Simuler le relâchement de la touche immédiatement après
-        setTimeout(() => {
-            const keyUpEvent = new KeyboardEvent('keyup', {
-                key: 'f',
-                code: 'KeyF',
-                keyCode: 70,
-                which: 70,
-                bubbles: true,
-                cancelable: true
-            });
-            document.dispatchEvent(keyUpEvent);
-        }, 10);
-        
-        // Solve immédiat après F
-        setTimeout(() => {
-            if (botEnabled) {
-                const areaBlock = document.getElementById('AreaBlock');
-                if (areaBlock) {
-                    const areaBlockMatrix = interpretAreaBlock(areaBlock);
-                    solveAreaBlock(areaBlockMatrix);
-                }
-            }
-        }, 50);
-    }
-
     // Simule l'appui de la touche "C" (click - là où il n'y a pas de bombe)
     function simulateKeyC() {
         const keyDownEvent = new KeyboardEvent('keydown', {
@@ -195,22 +159,29 @@
             keyCode: 67,
             which: 67,
             bubbles: true,
-            cancelable: true
+            cancelable: true,
+            composed: true
         });
+        
+        const keyUpEvent = new KeyboardEvent('keyup', {
+            key: 'c',
+            code: 'KeyC',
+            keyCode: 67,
+            which: 67,
+            bubbles: true,
+            cancelable: true,
+            composed: true
+        });
+        
+        // Dispatcher sur window et document pour une meilleure compatibilité
+        window.dispatchEvent(keyDownEvent);
         document.dispatchEvent(keyDownEvent);
         
-        // Simuler le relâchement de la touche immédiatement après
+        // Simuler le relâchement après un court délai
         setTimeout(() => {
-            const keyUpEvent = new KeyboardEvent('keyup', {
-                key: 'c',
-                code: 'KeyC',
-                keyCode: 67,
-                which: 67,
-                bubbles: true,
-                cancelable: true
-            });
+            window.dispatchEvent(keyUpEvent);
             document.dispatchEvent(keyUpEvent);
-        }, 10);
+        }, 20);
         
         // Solve immédiat après C
         setTimeout(() => {
@@ -333,11 +304,6 @@
             }
         } else if (isGreen) {
             solvedElement.textContent = 'bomb';
-            // Simuler F seulement si c'est une nouvelle cellule, si le bot est activé et si elle n'a pas déjà un flag
-            if (botEnabled && !isFlagged && lastActionCell !== cell) {
-                simulateKeyF();
-                lastActionCell = cell;
-            }
         } else {
             solvedElement.textContent = '-';
             // Réinitialiser lastActionCell si on quitte une cellule rouge/verte
@@ -728,28 +694,6 @@
 
         // 6. Advanced deductions
         advancedDeductions(areaBlockMatrix);
-    }
-
-    function startSolveInterval() {
-        if (solveInterval) {
-            clearInterval(solveInterval);
-        }
-        solveInterval = setInterval(() => {
-            if (botEnabled) {
-                const areaBlock = document.getElementById('AreaBlock');
-                if (areaBlock) {
-                    const areaBlockMatrix = interpretAreaBlock(areaBlock);
-                    solveAreaBlock(areaBlockMatrix);
-                }
-            }
-        }, 10);
-    }
-
-    function stopSolveInterval() {
-        if (solveInterval) {
-            clearInterval(solveInterval);
-            solveInterval = null;
-        }
     }
 
     // Initialize interface when DOM is ready
