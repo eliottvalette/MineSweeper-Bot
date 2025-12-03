@@ -88,8 +88,9 @@
     const redCells = new Set();
 
     let lastActionCell = null; // Dernière cellule sur laquelle on a déclenché F ou C
-    let clickCooldownMs = 0; // Cooldown de base entre deux clicks (en ms)
+    let clickCooldownMs = 250; // Cooldown de base entre deux clicks (en ms)
     let lastClickTimestamp = 0; // Timestamp du dernier click simulé
+    let hoverListenersInitialized = false; // Pour ne pas attacher plusieurs fois les listeners de hover
 
     function changeStyle(el, button) {
         if (button === 0) { // cellule sûre à cliquer => ROUGE (no bomb)
@@ -104,6 +105,23 @@
                 redCells.delete(el);
             }
         }
+    }
+
+    // Réinitialise tous les styles ajoutés par le bot sur les tuiles
+    function resetAllCellStyles() {
+        const areaBlock = document.getElementById('AreaBlock');
+        if (!areaBlock) return;
+
+        const cells = areaBlock.querySelectorAll('.cell');
+        cells.forEach(cell => {
+            cell.style.backgroundColor = '';
+            cell.style.border = '';
+            cell.style.pointerEvents = '';
+        });
+
+        redCells.clear();
+        lastActionCell = null;
+        lastClickTimestamp = 0;
     }
 
     // Simule l'appui de la touche "w"
@@ -228,19 +246,26 @@
                 }
                 #tile-info-overlay .info-line {
                     margin: 5px 0 !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
                 }
                 #tile-info-overlay .label {
                     font-weight: bold !important;
                     color: #4a9eff !important;
+                    min-width: 70px !important;
                 }
                 #click-cooldown-slider {
-                    width: 120px !important;
-                    vertical-align: middle !important;
-                    margin-left: 8px !important;
+                    flex: 1 1 auto !important;
+                    max-width: 140px !important;
+                    accent-color: #4a9eff !important;
                 }
                 #click-cooldown-value {
-                    margin-left: 6px !important;
+                    min-width: 50px !important;
+                    text-align: right !important;
                     font-weight: bold !important;
+                    color: #e0e0e0 !important;
+                    font-variant-numeric: tabular-nums !important;
                 }
             `;
             document.head.appendChild(style);
@@ -255,8 +280,8 @@
             <div class="info-line"><span class="label">Solved:</span> <span id="tile-solved">-</span></div>
             <div class="info-line">
                 <span class="label">Cooldown:</span>
-                <input id="click-cooldown-slider" type="range" min="0" max="500" step="10" value="0" />
-                <span id="click-cooldown-value">0 ms</span>
+                <input id="click-cooldown-slider" type="range" min="0" max="500" step="10" value="200" />
+                <span id="click-cooldown-value">200 ms</span>
             </div>
         `;
         document.body.appendChild(overlay);
@@ -265,6 +290,10 @@
         const slider = document.getElementById('click-cooldown-slider');
         const sliderValue = document.getElementById('click-cooldown-value');
         if (slider && sliderValue) {
+            // Valeur par défaut alignée sur clickCooldownMs
+            slider.value = String(clickCooldownMs);
+            sliderValue.textContent = `${clickCooldownMs} ms`;
+
             slider.addEventListener('input', () => {
                 const value = parseInt(slider.value, 10) || 0;
                 clickCooldownMs = value;
@@ -349,23 +378,25 @@
 
     // Ajoute les event listeners sur les cellules pour le hover
     function setupTileHoverListeners() {
-        const areaBlock = document.getElementById('AreaBlock');
-        if (!areaBlock) return;
+        if (hoverListenersInitialized) {
+            return;
+        }
+        hoverListenersInitialized = true;
 
-        // Utiliser la délégation d'événements pour gérer toutes les cellules (existantes et futures)
-        areaBlock.addEventListener('mouseover', (e) => {
-            const cell = e.target.closest('.cell');
+        // Utiliser la délégation d'événements sur le document pour gérer toutes les cellules (existantes et futures)
+        document.addEventListener('mouseover', (e) => {
+            const cell = e.target.closest('#AreaBlock .cell');
             if (cell) {
                 updateTileInfo(cell);
             }
         }, true);
 
-        areaBlock.addEventListener('mouseout', (e) => {
-            const cell = e.target.closest('.cell');
+        document.addEventListener('mouseout', (e) => {
+            const cell = e.target.closest('#AreaBlock .cell');
             if (cell) {
                 const relatedTarget = e.relatedTarget;
-                // Si on sort vraiment de la cellule (pas juste vers un enfant)
-                if (!relatedTarget || !relatedTarget.closest || !relatedTarget.closest('.cell')) {
+                // Si on sort vraiment de la zone de jeu (pas juste vers une autre cellule)
+                if (!relatedTarget || !relatedTarget.closest || !relatedTarget.closest('#AreaBlock .cell')) {
                     updateTileInfo(null);
                 }
             }
@@ -402,18 +433,18 @@
             botEnabled = !botEnabled;
             document.getElementById('toggleBotButton').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
 
-            // Make all cells clickable when bot is disabled
             const areaBlock = document.getElementById('AreaBlock');
-            if (areaBlock) {
-                const cells = areaBlock.querySelectorAll('.cell');
-                cells.forEach(cell => {
-                    cell.style.pointerEvents = 'auto'
-                });
-            }
 
-            // Clean up red cells when disabling bot
             if (!botEnabled) {
-                redCells.clear();
+                // Désactivation du bot : tout redeviens "normal" et cliquable
+                resetAllCellStyles();
+                if (areaBlock) {
+                    const cells = areaBlock.querySelectorAll('.cell');
+                    cells.forEach(cell => {
+                        cell.style.pointerEvents = 'auto';
+                    });
+                }
+
                 if (probeCell) {
                     probeCell.style.position = '';
                     probeCell.style.left = '';
@@ -426,11 +457,16 @@
                     probeCell.style.zIndex = '';
                     probeCell = null;
                 }
-                // Arrêter l'intervalle de solve
                 stopSolveInterval();
             } else {
-                // Démarrer l'intervalle de solve quand le bot est activé
+                // Activation du bot : reset complet + solve immédiat
+                resetAllCellStyles();
                 startSolveInterval();
+
+                if (areaBlock) {
+                    const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                    solveAreaBlock(areaBlockMatrix);
+                }
             }
 
             console.log('botEnabled', botEnabled);
@@ -450,15 +486,9 @@
         // Initialiser l'overlay d'information
         initializeTileInfoOverlay();
 
-        // Initialiser les listeners de hover (avec retry si AreaBlock n'existe pas encore)
+        // Initialiser les listeners de hover (une seule fois, via délégation document)
         function trySetupListeners() {
-            const areaBlock = document.getElementById('AreaBlock');
-            if (areaBlock) {
-                setupTileHoverListeners();
-            } else {
-                // Réessayer après un court délai
-                setTimeout(trySetupListeners, 100);
-            }
+            setupTileHoverListeners();
         }
         trySetupListeners();
 
@@ -683,7 +713,7 @@
         const height = areaBlockMatrix.length;
         const width = areaBlockMatrix[0].length;
 
-        // 2. If Cell is opened, remove the added style for opened cells
+            // 2. If Cell is opened, remove the added style for opened cells
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         if (areaBlockMatrix[i][j] > -1) {
