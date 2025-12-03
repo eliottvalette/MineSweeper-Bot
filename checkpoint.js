@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Minesweeper.online Nexus Interface
+// @name         Minesweeper.online
 // @namespace    http://tampermonkey.net/
 // @version      2025-06-03
-// @description  Nexus Interface for Minesweeper.online
+// @description  Minesweeper.online Cheat
 // @author       You
 // @match        *://minesweeper.online/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=minesweeper.online
@@ -80,22 +80,163 @@
 (function() {
     'use strict';
 
-    let g2_usage = true;
+    let botEnabled = true;
+
+    // Hot-spot pile pour cliquer sans déplacer la souris
+    const HOT_LEFT_RED = 20;      // px depuis la gauche
+    const HOT_TOP_RED  = 200;     // px depuis le haut
+    const HOT_LEFT_GREEN = 70;      // px depuis la gauche
+    const HOT_TOP_GREEN  = 200;     // px depuis le haut
+    const HOT_SIZE = 48;      // largeur/hauteur des cellules empilées
+
+    const TARGET_COL = 8.5;
+    const TARGET_ROW = 12.5;
+
+    let probeCell = null; // cellule "sonde" quand plus aucune rouge
+
+    /** Ensemble des cellules "rouges" actuellement cliquables */
+    const redCells = new Set();
+
+    // distance^2 au point cible (évite sqrt)
+    function distance2ToTarget(el) {
+        const col = parseInt(el.getAttribute('data-x') ?? el.id.split('_')[1], 10);
+        const row = parseInt(el.getAttribute('data-y') ?? el.id.split('_')[2], 10);
+        const dx = col - TARGET_COL, dy = row - TARGET_ROW;
+        return dx*dx + dy*dy;
+    }
+
+    // trouve la cellule fermée non verte la plus proche de (8.5,12.5)
+    function findClosestClosedNonGreenCell() {
+        const areaBlock = document.getElementById('AreaBlock');
+        if (!areaBlock) return null;
+        const candidates = Array.from(areaBlock.querySelectorAll('.cell.hdn_closed:not(.hdn_flag)'));
+        let best = null, bestD2 = Infinity;
+
+        for (const el of candidates) {
+            // exclure explicitement les vertes (style inline posé par le bot)
+            const isGreen = el.style.backgroundColor === 'rgba(0, 255, 0, 0.7)' || el.style.border === '2px solid green';
+            if (isGreen) continue;
+
+            const d2 = distance2ToTarget(el);
+            if (d2 < bestD2) { bestD2 = d2; best = el; }
+        }
+        return best;
+    }
+
+    // place une cellule au hot spot et arme le "mode sonde"
+    function armProbeMode(cell) {
+        // nettoyer toute pile rouge
+        redCells.forEach(el => resetCellLayout(el));
+        redCells.clear();
+
+        // désactiver les clics partout, sauf la sonde
+        const areaBlock = document.getElementById('AreaBlock');
+        if (areaBlock) {
+            areaBlock.querySelectorAll('.cell').forEach(c => { c.style.pointerEvents = 'none'; });
+        }
+
+        // styliser la sonde (ne PAS la colorer en vert)
+        probeCell = cell;
+        probeCell.style.position = 'fixed';
+        probeCell.style.left = HOT_LEFT_RED + 'px';
+        probeCell.style.top  = HOT_TOP_RED  + 'px';
+        probeCell.style.width  = HOT_SIZE + 'px';
+        probeCell.style.height = HOT_SIZE + 'px';
+        probeCell.style.margin = '0';
+        probeCell.style.transform = 'none';
+        probeCell.style.boxSizing = 'border-box';
+        probeCell.style.zIndex = '20000';
+        probeCell.style.pointerEvents = 'auto';
+
+        // désactiver le bot (UI + état)
+        botEnabled = false;
+        const tb = document.getElementById('toggleBot');
+        if (tb) tb.textContent = 'Enable Bot';
+
+        // au 1er clic sur la sonde : on réactive le bot et on relance solve
+        const onProbeClick = () => {
+            // petite remise à zéro du layout de la sonde
+            resetCellLayout(probeCell);
+            probeCell = null;
+
+            // réactiver les clics par défaut
+            if (areaBlock) {
+                areaBlock.querySelectorAll('.cell').forEach(c => { c.style.pointerEvents = ''; });
+            }
+
+            botEnabled = true;
+            if (tb) tb.textContent = 'Disable Bot';
+
+            // relancer immédiatement le solve sur l'état courant
+            const ab = document.getElementById('AreaBlock');
+            if (ab) {
+                const m = interpretAreaBlock(ab);
+                // relance asynchrone pour sortir proprement du contexte du click
+                setTimeout(() => solveAreaBlock(m), 0);
+            }
+
+            // enlever ce listener "one-shot"
+            probeCell?.removeEventListener('click', onProbeClick, true);
+        };
+        // capture en phase "true" pour être sûr de passer avant le site
+        probeCell.addEventListener('click', onProbeClick, true);
+    }
+
+    function getCellRank(el) {
+        const col = parseInt(el.getAttribute('data-x') ?? el.id.split('_')[1], 10);
+        const row = parseInt(el.getAttribute('data-y') ?? el.id.split('_')[2], 10);
+        const distance = Math.sqrt(col - 8.5) ** 2 + Math.sqrt(row - 12.5) ** 2;
+        return 1 / distance;
+    }
+
+    /** Positionne toutes les cellules rouges exactement au même point (pile) */
+    function layoutRedCells() {
+        // Trie par rank distance euclidienne au point 8.5, 12.5
+        const sorted = [...redCells].sort((a, b) => getCellRank(a) - getCellRank(b));
+
+        // Le plus petit rank sera en dessous, le plus grand au-dessus
+        sorted.forEach((el, i) => {
+            el.style.position = 'fixed';
+            el.style.left = HOT_LEFT_RED + 'px';
+            el.style.top  = HOT_TOP_RED - i * 4 + 'px';
+            el.style.width  = HOT_SIZE + 'px';
+            el.style.height = HOT_SIZE + 'px';
+            el.style.margin = '0';
+            el.style.transform = 'none';
+            el.style.boxSizing = 'border-box';
+            el.style.zIndex = String(100 + i); // i croît avec le rank → au-dessus
+            el.style.pointerEvents = 'auto';
+        });
+    }
+
+    /** Restaure le layout d'origine d'une cellule (sans toucher au DOM ni aux classes) */
+    function resetCellLayout(el) {
+        el.style.position = '';
+        el.style.left = '';
+        el.style.top = '';
+        el.style.width = '';
+        el.style.height = '';
+        el.style.margin = '';
+        el.style.transform = '';
+        el.style.boxSizing = '';
+        el.style.zIndex = '';
+    }
 
     function changeStyle(el, button) {
-        if (button === 0) { // change cell style into red
-            if (el.style.backgroundColor !== 'rgba(255, 0, 0, 0.7)' || el.style.border !== '2px solid red') {
-                el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-                el.style.border = '2px solid red';
-                el.style.zIndex = '1000';
-                el.style.pointerEvents = 'auto';
-            }
-        } else { // change cell style into green
-            if (el.style.backgroundColor !== 'rgba(0, 255, 0, 0.7)' || el.style.border !== '2px solid green') {
-                el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
-                el.style.border = '2px solid green';
-                el.style.zIndex = '1000';
-                el.style.pointerEvents = 'none';
+        if (button === 0) { // cellule sûre à cliquer => ROUGE (cliquable)
+            el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+            el.style.border = '2px solid red';
+            el.style.pointerEvents = 'auto';
+            redCells.add(el);
+            layoutRedCells(); // empile au hot-spot
+        } else { // cellule à ignorer/flag => VERT (non cliquable ici)
+            el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
+            el.style.border = '2px solid green';
+            el.style.pointerEvents = 'none';
+            if (redCells.has(el)) {
+                redCells.delete(el);
+                resetCellLayout(el);
+                layoutRedCells(); // réajuste la pile
             }
         }
     }
@@ -121,6 +262,7 @@
                     box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
                     border-radius: 5px;
                     overflow: hidden;
+                    cursor: move;
                 }
                 .nexus-interface-content {
                     padding: 10px;
@@ -140,8 +282,7 @@
             </style>
             <div class="nexus-interface">
                 <button id="areaBlock"> Area Block </button>
-                <button id="areaBlock_g2"> Area Block G2 </button>
-                <button id="toggle_g2"> Turn G2 Off </button>
+                <button id="toggleBot"> Disable Bot </button>
                 <button id="solve"> Solve </button>
                 <button id="log"> Log Advanced Deductions Calculationq </button>
             </div>
@@ -156,18 +297,30 @@
             }
         });
 
-        document.getElementById('areaBlock_g2').addEventListener('click', () => {
-            const areaBlock = document.getElementById('AreaBlock_g2');
-            if (areaBlock) {
-                const areaBlockMatrix = interpretOpponentAreaBlock(areaBlock);
-                console.log(areaBlockMatrix);
-            }
-        });
+        document.getElementById('toggleBot').addEventListener('click', () => {
+            botEnabled = !botEnabled;
+            document.getElementById('toggleBot').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
 
-        document.getElementById('toggle_g2').addEventListener('click', () => {
-            g2_usage = !g2_usage;
-            document.getElementById('toggle_g2').textContent = g2_usage ? 'Turn G2 Off' : 'Turn G2 On';
-            console.log('g2_usage', g2_usage);
+            // Make all cells clickable when bot is disabled
+            const areaBlock = document.getElementById('AreaBlock');
+            if (areaBlock) {
+                const cells = areaBlock.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    cell.style.pointerEvents = 'auto'
+                });
+            }
+
+            // Clean up red cells when disabling bot
+            if (!botEnabled) {
+                redCells.forEach(el => resetCellLayout(el));
+                redCells.clear();
+                if (probeCell) {
+                    resetCellLayout(probeCell);
+                    probeCell = null;
+                }
+            }
+
+            console.log('botEnabled', botEnabled);
         });
 
         document.getElementById('solve').addEventListener('click', () => {
@@ -183,6 +336,87 @@
             if (areaBlock) {
                 const areaBlockMatrix = interpretAreaBlock(areaBlock);
                 advancedDeductions(areaBlockMatrix, true);
+            }
+        });
+
+        // Make interface draggable
+        const nexusInterface = document.querySelector('.nexus-interface');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        nexusInterface.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+
+            if (e.target === nexusInterface) {
+                isDragging = true;
+            }
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                nexusInterface.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+            }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+
+        // Keyboard shortcut for spacebar
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyD') {
+                e.preventDefault();
+                botEnabled = !botEnabled;
+                document.getElementById('toggleBot').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
+
+                // Make all cells clickable when bot is disabled
+                const areaBlock = document.getElementById('AreaBlock');
+                if (areaBlock) {
+                    const cells = areaBlock.querySelectorAll('.cell');
+                    cells.forEach(cell => {
+                        cell.style.pointerEvents = 'auto'
+                    });
+                }
+
+                // Clean up red cells when disabling bot
+                if (!botEnabled) {
+                    redCells.forEach(el => resetCellLayout(el));
+                    redCells.clear();
+                    if (probeCell) {
+                        resetCellLayout(probeCell);
+                        probeCell = null;
+                    }
+                }
+
+                // If bot is enabled, automatically click solve
+                if (botEnabled) {
+                    const areaBlock = document.getElementById('AreaBlock');
+                    if (areaBlock) {
+                        const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                        solveAreaBlock(areaBlockMatrix);
+                    }
+                }
+
+                console.log('botEnabled', botEnabled);
             }
         });
     }
@@ -230,50 +464,6 @@
         return areaBlockMatrix;
     }
 
-    function interpretOpponentAreaBlock(areaBlock) {
-        if (!areaBlock) return null;
-
-        const cells = areaBlock.querySelectorAll('.cell');
-        let maxRow = 0, maxCol = 0;
-
-        cells.forEach(cell => {
-            const [cellStr, colStr, rowStr] = cell.id.split('_');
-            const row = parseInt(rowStr, 10);
-            const col = parseInt(colStr, 10);
-            if (row > maxRow) maxRow = row;
-            if (col > maxCol) maxCol = col;
-        });
-
-        maxRow++;
-        maxCol++;
-
-        const cellsArray = Array.from(cells);
-        const areaBlockMatrix = Array(maxRow).fill().map(() => Array(maxCol).fill(0));
-
-        for (let i = 0; i < maxRow; i++) {
-            for (let j = 0; j < maxCol; j++) {
-                const cell = cellsArray[i * maxCol + j];
-                if (!cell) continue;
-                if (cell.id.includes('g2')) {
-                    if (cell.classList.contains('hdn_closed')) {
-                        if (cell.classList.contains('hdn_flag')) {
-                            areaBlockMatrix[i][j] = 'X';
-                        } else {
-                            areaBlockMatrix[i][j] = -1;
-                        }
-                    } else if (cell.classList.contains('hdn_opened')) {
-                        for (let k = 0; k < maxCol; k++) {
-                            if (cell.classList.contains(`hdn_type${k}`)) {
-                                areaBlockMatrix[i][j] = k;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return areaBlockMatrix;
-    }
 
     function countHiddenAround(areaBlockMatrix, i, j) {
         if (!areaBlockMatrix || i < 0 || j < 0 || i >= areaBlockMatrix.length || j >= areaBlockMatrix[0].length) {
@@ -456,16 +646,16 @@
                 if (cell) {
                     cell.style.backgroundColor = '';
                     cell.style.border = '';
+                    if (redCells.has(cell)) {
+                        redCells.delete(cell);
+                    }
+                    resetCellLayout(cell);
                 }
             }
         }
 
-        let areaBlockMatrix_g2 = null;
-        if (document.getElementById('AreaBlock_g2')) {
-            areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
-        }
 
-        while (true) {
+        while (true && botEnabled) {
             // 0. Check if all cells are closed
             let allClosed = true;
             for (let i = 0; i < height; i++) {
@@ -487,6 +677,8 @@
                         }
                     }
                 }
+                redCells.forEach(el => resetCellLayout(el));
+                redCells.clear();
                 return; // Exit the async function if all cells are closed
             } else {
                 // Set all closed cells to not clickable
@@ -509,22 +701,9 @@
                 }
             }
 
-            // 1. Once in a while, remove the added style for opened cells
-            if (Math.random() < 0.01) {
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        const cell = document.querySelector(`#cell_${j}_${i}`);
-                        if (cell) {
-                            cell.style.backgroundColor = '';
-                            cell.style.border = '';
-                            cell.style.pointerEvents = 'auto';
-                        }
-                    }
-                }
-            }
 
             // 2. If Cell is opened, remove the added style for opened cells
-            if (handMode) {
+            if (botEnabled) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         if (areaBlockMatrix[i][j] > -1) {
@@ -532,35 +711,21 @@
                             if (cell) {
                                 cell.style.backgroundColor = '';
                                 cell.style.border = '';
+                                cell.style.pointerEvents = '';
+                                if (redCells.has(cell)) {
+                                    redCells.delete(cell);
+                                    resetCellLayout(cell);
+                                    layoutRedCells();
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // 3. Look for the cells that are opened in the opponent's area block
-            if (g2_usage && areaBlockMatrix_g2) {
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        if (areaBlockMatrix_g2[i][j] >=0 && areaBlockMatrix[i][j] === -1) {
-                            const cell = document.querySelector(`#cell_${j}_${i}`);
-                            if (cell) {
-                                changeStyle(cell, 0);
-                                areaBlockMatrix_g2[i][j] = areaBlockMatrix_g2[i][j];
-                            }
-                        } else if (areaBlockMatrix_g2[i][j] === 'X' && areaBlockMatrix[i][j] === -1) {
-                            areaBlockMatrix[i][j] = 'X';
-                            const cell = document.querySelector(`#cell_${j}_${i}`);
-                            if (cell) {
-                                changeStyle(cell, 1);
-                            }
-                        }
-                    }
-                }
-            }
 
             // 4. Click safe cells if all mines are already flagged
-            if (handMode) {
+            if (botEnabled) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         if (areaBlockMatrix[i][j] > 0) {
@@ -568,6 +733,7 @@
                             if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
                                 changeStyleCellsAround(areaBlockMatrix, i, j, false);
                                 areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                                layoutRedCells();
                             }
                         }
                     }
@@ -575,7 +741,7 @@
             }
 
             // 5. Flag mines if all hidden cells must be mines
-            if (handMode) {
+            if (botEnabled) {
                 for (let i = 0; i < height; i++) {
                     for (let j = 0; j < width; j++) {
                         if (areaBlockMatrix[i][j] > 0) {
@@ -583,6 +749,7 @@
                             if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
                                 changeStyleCellsAround(areaBlockMatrix, i, j, true);
                                 areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                                layoutRedCells();
                             }
                         }
                     }
@@ -590,14 +757,22 @@
             }
 
             // 6. Advanced deductions
-            advancedDeductions(areaBlockMatrix);
+            if (botEnabled) {
+                advancedDeductions(areaBlockMatrix);
+            }
 
             // Re-interpret the board after each round
             areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
 
-            if (document.getElementById('AreaBlock_g2') && g2_usage) {
-                areaBlockMatrix_g2 = interpretOpponentAreaBlock(document.getElementById('AreaBlock_g2'));
+            // Si plus aucune rouge, passer en "mode sonde"
+            if (redCells.size === 0) {
+                const candidate = findClosestClosedNonGreenCell();
+                if (candidate) {
+                    armProbeMode(candidate);
+                    return; // on laisse le click de la sonde relancer solve
+                }
             }
+
             count++;
 
             await new Promise(resolve => setTimeout(resolve, 60));

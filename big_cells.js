@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Minesweeper.online Nexus Interface
+// @name         Minesweeper.online
 // @namespace    http://tampermonkey.net/
 // @version      2025-06-03
-// @description  Nexus Interface for Minesweeper.online
+// @description  Minesweeper.online Cheat
 // @author       You
 // @match        *://minesweeper.online/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=minesweeper.online
@@ -81,225 +81,252 @@
     'use strict';
 
     let botEnabled = true;
-
-    // Hot-spot pile pour cliquer sans déplacer la souris
-    const HOT_LEFT_RED = 20;      // px depuis la gauche
-    const HOT_TOP_RED  = 200;     // px depuis le haut
-    const HOT_LEFT_GREEN = 70;      // px depuis la gauche
-    const HOT_TOP_GREEN  = 200;     // px depuis le haut
-    const HOT_SIZE = 48;      // largeur/hauteur des cellules empilées
-
-    const TARGET_COL = 8.5;
-    const TARGET_ROW = 12.5;
-
+    let keyWInterval = null; // intervalle pour simuler l'appui de la touche w
     let probeCell = null; // cellule "sonde" quand plus aucune rouge
 
-    /** Ensemble des cellules "rouges" actuellement cliquables */
-    const redCells = new Set();
-
-    // distance^2 au point cible (évite sqrt)
-    function distance2ToTarget(el) {
-        const col = parseInt(el.getAttribute('data-x') ?? el.id.split('_')[1], 10);
-        const row = parseInt(el.getAttribute('data-y') ?? el.id.split('_')[2], 10);
-        const dx = col - TARGET_COL, dy = row - TARGET_ROW;
-        return dx*dx + dy*dy;
-    }
-
-    // trouve la cellule fermée non verte la plus proche de (8.5,12.5)
-    function findClosestClosedNonGreenCell() {
-        const areaBlock = document.getElementById('AreaBlock');
-        if (!areaBlock) return null;
-        const candidates = Array.from(areaBlock.querySelectorAll('.cell.hdn_closed:not(.hdn_flag)'));
-        let best = null, bestD2 = Infinity;
-
-        for (const el of candidates) {
-            // exclure explicitement les vertes (style inline posé par le bot)
-            const isGreen = el.style.backgroundColor === 'rgba(0, 255, 0, 0.7)' || el.style.border === '2px solid green';
-            if (isGreen) continue;
-
-            const d2 = distance2ToTarget(el);
-            if (d2 < bestD2) { bestD2 = d2; best = el; }
-        }
-        return best;
-    }
-
-    // place une cellule au hot spot et arme le "mode sonde"
-    function armProbeMode(cell) {
-        // nettoyer toute pile rouge
-        redCells.forEach(el => resetCellLayout(el));
-        redCells.clear();
-
-        // désactiver les clics partout, sauf la sonde
-        const areaBlock = document.getElementById('AreaBlock');
-        if (areaBlock) {
-            areaBlock.querySelectorAll('.cell').forEach(c => { c.style.pointerEvents = 'none'; });
-        }
-
-        // styliser la sonde (ne PAS la colorer en vert)
-        probeCell = cell;
-        probeCell.style.position = 'fixed';
-        probeCell.style.left = HOT_LEFT_RED + 'px';
-        probeCell.style.top  = HOT_TOP_RED  + 'px';
-        probeCell.style.width  = HOT_SIZE + 'px';
-        probeCell.style.height = HOT_SIZE + 'px';
-        probeCell.style.margin = '0';
-        probeCell.style.transform = 'none';
-        probeCell.style.boxSizing = 'border-box';
-        probeCell.style.zIndex = '20000';
-        probeCell.style.pointerEvents = 'auto';
-
-        // désactiver le bot (UI + état)
-        botEnabled = false;
-        const tb = document.getElementById('toggleBot');
-        if (tb) tb.textContent = 'Enable Bot';
-
-        // au 1er clic sur la sonde : on réactive le bot et on relance solve
-        const onProbeClick = () => {
-            // petite remise à zéro du layout de la sonde
-            resetCellLayout(probeCell);
-            probeCell = null;
-
-            // réactiver les clics par défaut
-            if (areaBlock) {
-                areaBlock.querySelectorAll('.cell').forEach(c => { c.style.pointerEvents = ''; });
-            }
-
-            botEnabled = true;
-            if (tb) tb.textContent = 'Disable Bot';
-
-            // relancer immédiatement le solve sur l'état courant
-            const ab = document.getElementById('AreaBlock');
-            if (ab) {
-                const m = interpretAreaBlock(ab);
-                // relance asynchrone pour sortir proprement du contexte du click
-                setTimeout(() => solveAreaBlock(m), 0);
-            }
-
-            // enlever ce listener "one-shot"
-            probeCell?.removeEventListener('click', onProbeClick, true);
-        };
-        // capture en phase "true" pour être sûr de passer avant le site
-        probeCell.addEventListener('click', onProbeClick, true);
-    }
-
-    function getCellRank(el) {
-        const col = parseInt(el.getAttribute('data-x') ?? el.id.split('_')[1], 10);
-        const row = parseInt(el.getAttribute('data-y') ?? el.id.split('_')[2], 10);
-        const distance = Math.sqrt(col - 8.5) ** 2 + Math.sqrt(row - 12.5) ** 2;
-        return 1 / distance;
-    }
-
-    /** Positionne toutes les cellules rouges exactement au même point (pile) */
-    function layoutRedCells() {
-        // Trie par rank distance euclidienne au point 8.5, 12.5
-        const sorted = [...redCells].sort((a, b) => getCellRank(a) - getCellRank(b));
-
-        // Le plus petit rank sera en dessous, le plus grand au-dessus
-        sorted.forEach((el, i) => {
-            el.style.position = 'fixed';
-            el.style.left = HOT_LEFT_RED + 'px';
-            el.style.top  = HOT_TOP_RED - i * 4 + 'px';
-            el.style.width  = HOT_SIZE + 'px';
-            el.style.height = HOT_SIZE + 'px';
-            el.style.margin = '0';
-            el.style.transform = 'none';
-            el.style.boxSizing = 'border-box';
-            el.style.zIndex = String(100 + i); // i croît avec le rank → au-dessus
-            el.style.pointerEvents = 'auto';
-        });
-    }
-
-    /** Restaure le layout d'origine d'une cellule (sans toucher au DOM ni aux classes) */
-    function resetCellLayout(el) {
-        el.style.position = '';
-        el.style.left = '';
-        el.style.top = '';
-        el.style.width = '';
-        el.style.height = '';
-        el.style.margin = '';
-        el.style.transform = '';
-        el.style.boxSizing = '';
-        el.style.zIndex = '';
-    }
-
     function changeStyle(el, button) {
-        if (button === 0) { // cellule sûre à cliquer => ROUGE (cliquable)
+        if (button === 0) { // cellule sûre à cliquer => ROUGE (no bomb)
             el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
             el.style.border = '2px solid red';
-            el.style.pointerEvents = 'auto';
-            redCells.add(el);
-            layoutRedCells(); // empile au hot-spot
-        } else { // cellule à ignorer/flag => VERT (non cliquable ici)
+        } else { // cellule à ignorer/flag => VERT (bomb)
             el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
             el.style.border = '2px solid green';
-            el.style.pointerEvents = 'none';
-            if (redCells.has(el)) {
-                redCells.delete(el);
-                resetCellLayout(el);
-                layoutRedCells(); // réajuste la pile
-            }
         }
+    }
+
+    // Simule l'appui de la touche "w"
+    function simulateKeyW() {
+        const keyEvent = new KeyboardEvent('keydown', {
+            key: 'w',
+            code: 'KeyW',
+            keyCode: 87,
+            which: 87,
+            bubbles: true,
+            cancelable: true
+        });
+        document.dispatchEvent(keyEvent);
+    }
+
+    // Démarre la simulation de la touche "w" toutes les secondes
+    function startKeyWSimulation() {
+        if (keyWInterval) {
+            clearInterval(keyWInterval);
+        }
+        keyWInterval = setInterval(() => {
+            simulateKeyW();
+        }, 1000);
+    }
+
+    // Simule l'appui de la touche "F" (flag)
+    function simulateKeyF() {
+        const keyEvent = new KeyboardEvent('keydown', {
+            key: 'f',
+            code: 'KeyF',
+            keyCode: 70,
+            which: 70,
+            bubbles: true,
+            cancelable: true
+        });
+        document.dispatchEvent(keyEvent);
+    }
+
+    // Simule l'appui de la touche "C" (click - là où il n'y a pas de bombe)
+    function simulateKeyC() {
+        const keyEvent = new KeyboardEvent('keydown', {
+            key: 'c',
+            code: 'KeyC',
+            keyCode: 67,
+            which: 67,
+            bubbles: true,
+            cancelable: true
+        });
+        document.dispatchEvent(keyEvent);
+    }
+
+    // Initialise l'overlay d'information en haut à droite
+    function initializeTileInfoOverlay() {
+        // Vérifier si l'overlay existe déjà
+        let overlay = document.getElementById('tile-info-overlay');
+        if (overlay) {
+            return overlay;
+        }
+
+        // Créer le style si pas déjà présent
+        if (!document.getElementById('tile-info-overlay-style')) {
+            const style = document.createElement('style');
+            style.id = 'tile-info-overlay-style';
+            style.textContent = `
+                #tile-info-overlay {
+                    position: fixed !important;
+                    top: 10px !important;
+                    right: 10px !important;
+                    z-index: 10000 !important;
+                    background: rgba(15, 15, 30, 0.95) !important;
+                    border: 1px solid #1a3a5a !important;
+                    border-radius: 5px !important;
+                    padding: 10px !important;
+                    font-family: 'Tahoma', sans-serif !important;
+                    font-size: 14px !important;
+                    color: #e0e0e0 !important;
+                    min-width: 200px !important;
+                    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7) !important;
+                    pointer-events: none !important;
+                }
+                #tile-info-overlay .info-line {
+                    margin: 5px 0 !important;
+                }
+                #tile-info-overlay .label {
+                    font-weight: bold !important;
+                    color: #4a9eff !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Créer l'overlay
+        overlay = document.createElement('div');
+        overlay.id = 'tile-info-overlay';
+        overlay.innerHTML = `
+            <div class="info-line"><span class="label">State:</span> <span id="tile-state">-</span></div>
+            <div class="info-line"><span class="label">Number:</span> <span id="tile-number">-</span></div>
+            <div class="info-line"><span class="label">Solved:</span> <span id="tile-solved">-</span></div>
+        `;
+        document.body.appendChild(overlay);
+        return overlay;
+    }
+
+    // Met à jour l'overlay avec les informations de la cellule survolée
+    function updateTileInfo(cell) {
+        const stateElement = document.getElementById('tile-state');
+        const numberElement = document.getElementById('tile-number');
+        const solvedElement = document.getElementById('tile-solved');
+
+        if (!stateElement || !numberElement || !solvedElement) {
+            return; // Overlay pas encore créé
+        }
+
+        if (!cell) {
+            stateElement.textContent = '-';
+            numberElement.textContent = '-';
+            solvedElement.textContent = '-';
+            return;
+        }
+
+        const isClosed = cell.classList.contains('hdn_closed');
+        const isOpened = cell.classList.contains('hdn_opened');
+        const isFlagged = cell.classList.contains('hdn_flag');
+        const isRed = cell.style.backgroundColor === 'rgba(255, 0, 0, 0.7)' || cell.style.border === '2px solid red';
+        const isGreen = cell.style.backgroundColor === 'rgba(0, 255, 0, 0.7)' || cell.style.border === '2px solid green';
+
+        if (isClosed) {
+            if (isFlagged) {
+                stateElement.textContent = 'Closed (Flag)';
+            } else {
+                stateElement.textContent = 'Closed';
+            }
+            numberElement.textContent = '-';
+        } else if (isOpened) {
+            stateElement.textContent = 'Opened';
+            // Chercher le chiffre dans les classes hdn_type0, hdn_type1, etc.
+            let number = '-';
+            for (let i = 0; i <= 8; i++) {
+                if (cell.classList.contains(`hdn_type${i}`)) {
+                    number = String(i);
+                    break;
+                }
+            }
+            numberElement.textContent = number;
+        } else {
+            stateElement.textContent = 'Unknown';
+            numberElement.textContent = '-';
+        }
+
+        // Détecter si la cellule est résolue (rouge = no bomb, vert = bomb)
+        if (isRed) {
+            solvedElement.textContent = 'no bomb';
+        } else if (isGreen) {
+            solvedElement.textContent = 'bomb';
+        } else {
+            solvedElement.textContent = '-';
+        }
+    }
+
+    // Ajoute les event listeners sur les cellules pour le hover
+    function setupTileHoverListeners() {
+        const areaBlock = document.getElementById('AreaBlock');
+        if (!areaBlock) return;
+
+        // Fonction pour ajouter les listeners à une cellule
+        function addCellListeners(cell) {
+            if (cell.dataset.hoverListenerAdded) return; // Éviter les doublons
+            cell.dataset.hoverListenerAdded = 'true';
+
+            cell.addEventListener('mouseenter', () => {
+                updateTileInfo(cell);
+            });
+
+            cell.addEventListener('mouseleave', () => {
+                updateTileInfo(null);
+            });
+        }
+
+        // Ajouter les listeners aux cellules existantes
+        const existingCells = areaBlock.querySelectorAll('.cell');
+        existingCells.forEach(addCellListeners);
+
+        // Observer les nouvelles cellules ajoutées dynamiquement
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) { // Element node
+                        if (node.classList && node.classList.contains('cell')) {
+                            addCellListeners(node);
+                        }
+                        // Vérifier aussi les enfants
+                        const childCells = node.querySelectorAll && node.querySelectorAll('.cell');
+                        if (childCells) {
+                            childCells.forEach(addCellListeners);
+                        }
+                    }
+                });
+            });
+        });
+
+        observer.observe(areaBlock, {
+            childList: true,
+            subtree: true
+        });
     }
 
     function initializeInterface() {
         const interfaceContainer = document.createElement('div');
         interfaceContainer.innerHTML = `
             <style>
-                .nexus-interface {
+                #toggleBotButton {
                     position: fixed;
+                    top: 10px;
                     left: 10px;
-                    bottom: 100px;
                     z-index: 999;
-                    display: flex;
-                    flex-direction: column;
-                    font-family: 'Tahoma', sans-serif;
-                    font-size: 13px;
-                    color: #e0e0e0;
-                    width: 260px;
-                    user-select: none;
-                    border: 1px solid #1a3a5a;
-                    background: rgba(15, 15, 30, 0.9);
-                    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
-                    border-radius: 5px;
-                    overflow: hidden;
-                    cursor: move;
-                }
-                .nexus-interface-content {
-                    padding: 10px;
-                }
-                button {
                     background: #1a3a5a;
                     color: #e0e0e0;
                     border: none;
-                    padding: 5px 10px;
+                    padding: 8px 16px;
                     border-radius: 5px;
-                    margin: 5px;
+                    font-family: 'Tahoma', sans-serif;
+                    font-size: 13px;
                     cursor: pointer;
                 }
-                button:hover {
+                #toggleBotButton:hover {
                     background: #2a4a6a;
                 }
             </style>
-            <div class="nexus-interface">
-                <button id="areaBlock"> Area Block </button>
-                <button id="toggleBot"> Disable Bot </button>
-                <button id="solve"> Solve </button>
-                <button id="log"> Log Advanced Deductions Calculationq </button>
-            </div>
+            <button id="toggleBotButton">Disable Bot</button>
         `;
         document.body.appendChild(interfaceContainer);
 
-        document.getElementById('areaBlock').addEventListener('click', () => {
-            const areaBlock = document.getElementById('AreaBlock');
-            if (areaBlock) {
-                const areaBlockMatrix = interpretAreaBlock(areaBlock);
-                console.log(areaBlockMatrix);
-            }
-        });
-
-        document.getElementById('toggleBot').addEventListener('click', () => {
+        document.getElementById('toggleBotButton').addEventListener('click', () => {
             botEnabled = !botEnabled;
-            document.getElementById('toggleBot').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
+            document.getElementById('toggleBotButton').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
 
             // Make all cells clickable when bot is disabled
             const areaBlock = document.getElementById('AreaBlock');
@@ -312,113 +339,55 @@
 
             // Clean up red cells when disabling bot
             if (!botEnabled) {
-                redCells.forEach(el => resetCellLayout(el));
                 redCells.clear();
                 if (probeCell) {
-                    resetCellLayout(probeCell);
+                    probeCell.style.position = '';
+                    probeCell.style.left = '';
+                    probeCell.style.top = '';
+                    probeCell.style.width = '';
+                    probeCell.style.height = '';
+                    probeCell.style.margin = '';
+                    probeCell.style.transform = '';
+                    probeCell.style.boxSizing = '';
+                    probeCell.style.zIndex = '';
                     probeCell = null;
                 }
+                stopSolveInterval();
+            } else {
+                startSolveInterval();
             }
 
             console.log('botEnabled', botEnabled);
         });
 
-        document.getElementById('solve').addEventListener('click', () => {
-            const areaBlock = document.getElementById('AreaBlock');
-            if (areaBlock) {
-                const areaBlockMatrix = interpretAreaBlock(areaBlock);
-                solveAreaBlock(areaBlockMatrix);
-            }
-        });
-
-        document.getElementById('log').addEventListener('click', () => {
-            const areaBlock = document.getElementById('AreaBlock');
-            if (areaBlock) {
-                const areaBlockMatrix = interpretAreaBlock(areaBlock);
-                advancedDeductions(areaBlockMatrix, true);
-            }
-        });
-
-        // Make interface draggable
-        const nexusInterface = document.querySelector('.nexus-interface');
-        let isDragging = false;
-        let currentX;
-        let currentY;
-        let initialX;
-        let initialY;
-        let xOffset = 0;
-        let yOffset = 0;
-
-        nexusInterface.addEventListener('mousedown', dragStart);
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('mouseup', dragEnd);
-
-        function dragStart(e) {
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-
-            if (e.target === nexusInterface) {
-                isDragging = true;
-            }
-        }
-
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
-
-                xOffset = currentX;
-                yOffset = currentY;
-
-                nexusInterface.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-            }
-        }
-
-        function dragEnd(e) {
-            initialX = currentX;
-            initialY = currentY;
-            isDragging = false;
-        }
-
-        // Keyboard shortcut for spacebar
+        // Keyboard shortcut for KeyD
         document.addEventListener('keydown', (e) => {
             if (e.code === 'KeyD') {
                 e.preventDefault();
-                botEnabled = !botEnabled;
-                document.getElementById('toggleBot').textContent = botEnabled ? 'Disable Bot' : 'Enable Bot';
-
-                // Make all cells clickable when bot is disabled
-                const areaBlock = document.getElementById('AreaBlock');
-                if (areaBlock) {
-                    const cells = areaBlock.querySelectorAll('.cell');
-                    cells.forEach(cell => {
-                        cell.style.pointerEvents = 'auto'
-                    });
+                const toggleButton = document.getElementById('toggleBotButton');
+                if (toggleButton) {
+                    toggleButton.click();
                 }
-
-                // Clean up red cells when disabling bot
-                if (!botEnabled) {
-                    redCells.forEach(el => resetCellLayout(el));
-                    redCells.clear();
-                    if (probeCell) {
-                        resetCellLayout(probeCell);
-                        probeCell = null;
-                    }
-                }
-
-                // If bot is enabled, automatically click solve
-                if (botEnabled) {
-                    const areaBlock = document.getElementById('AreaBlock');
-                    if (areaBlock) {
-                        const areaBlockMatrix = interpretAreaBlock(areaBlock);
-                        solveAreaBlock(areaBlockMatrix);
-                    }
-                }
-
-                console.log('botEnabled', botEnabled);
             }
         });
+
+        // Initialiser l'overlay d'information
+        initializeTileInfoOverlay();
+
+        // Initialiser les listeners de hover (avec retry si AreaBlock n'existe pas encore)
+        function trySetupListeners() {
+            const areaBlock = document.getElementById('AreaBlock');
+            if (areaBlock) {
+                setupTileHoverListeners();
+            } else {
+                // Réessayer après un court délai
+                setTimeout(trySetupListeners, 100);
+            }
+        }
+        trySetupListeners();
+
+        // Démarrer l'intervalle de solve
+        startSolveInterval();
     }
 
     function interpretAreaBlock(areaBlock) {
@@ -633,149 +602,79 @@
         });
     }
 
-    async function solveAreaBlock(areaBlockMatrix) {
-        if (!areaBlockMatrix) return;
+    function solveAreaBlock(areaBlockMatrix) {
+        if (!areaBlockMatrix || !botEnabled) return;
         const height = areaBlockMatrix.length;
         const width = areaBlockMatrix[0].length;
-        let count = 0;
-        let handMode = false;
 
+        // 2. If Cell is opened, remove the added style for opened cells
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
-                const cell = document.querySelector(`#cell_${j}_${i}`);
-                if (cell) {
-                    cell.style.backgroundColor = '';
-                    cell.style.border = '';
-                    if (redCells.has(cell)) {
-                        redCells.delete(cell);
+                if (areaBlockMatrix[i][j] > -1) {
+                    const cell = document.querySelector(`#cell_${j}_${i}`);
+                    if (cell) {
+                        cell.style.backgroundColor = '';
+                        cell.style.border = '';
+                        cell.style.pointerEvents = '';
+                        if (redCells.has(cell)) {
+                            redCells.delete(cell);
+                        }
                     }
-                    resetCellLayout(cell);
                 }
             }
         }
 
-
-        while (true && botEnabled) {
-            // 0. Check if all cells are closed
-            let allClosed = true;
-            for (let i = 0; i < height; i++) {
-                for (let j = 0; j < width; j++) {
-                    const cell = document.querySelector(`#cell_${j}_${i}`);
-                    if (cell && !cell.classList.contains('hdn_closed')) {
-                        allClosed = false;
-                        break;
-                    }
-                }
-                if (!allClosed) break;
-            }
-            if (allClosed) {
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        const cell = document.querySelector(`#cell_${j}_${i}`);
-                        if (cell) {
-                            cell.style.pointerEvents = 'auto';
-                        }
-                    }
-                }
-                redCells.forEach(el => resetCellLayout(el));
-                redCells.clear();
-                return; // Exit the async function if all cells are closed
-            } else {
-                // Set all closed cells to not clickable
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        const cell = document.querySelector(`#cell_${j}_${i}`);
-                        if (cell && cell.classList.contains('hdn_closed')) {
-                            cell.style.pointerEvents = 'none';
-                        }
-                    }
-                }
-                // Set only red closed cells to clickable
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        const cell = document.querySelector(`#cell_${j}_${i}`);
-                        if (cell && cell.classList.contains('hdn_closed') && cell.style.backgroundColor === 'rgba(255, 0, 0, 0.7)') {
-                            cell.style.pointerEvents = 'auto';
-                        }
+        // 4. Click safe cells if all mines are already flagged
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                if (areaBlockMatrix[i][j] > 0) {
+                    const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                    if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
+                        changeStyleCellsAround(areaBlockMatrix, i, j, false);
+                        areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
                     }
                 }
             }
+        }
 
+        // 5. Flag mines if all hidden cells must be mines
+        for (let i = 0; i < height; i++) {
+            for (let j = 0; j < width; j++) {
+                if (areaBlockMatrix[i][j] > 0) {
+                    const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                    if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
+                        changeStyleCellsAround(areaBlockMatrix, i, j, true);
+                        areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                    }
+                }
+            }
+        }
 
-            // 2. If Cell is opened, remove the added style for opened cells
+        // 6. Advanced deductions
+        advancedDeductions(areaBlockMatrix);
+    }
+
+    let solveInterval = null;
+
+    function startSolveInterval() {
+        if (solveInterval) {
+            clearInterval(solveInterval);
+        }
+        solveInterval = setInterval(() => {
             if (botEnabled) {
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        if (areaBlockMatrix[i][j] > -1) {
-                            const cell = document.querySelector(`#cell_${j}_${i}`);
-                            if (cell) {
-                                cell.style.backgroundColor = '';
-                                cell.style.border = '';
-                                cell.style.pointerEvents = '';
-                                if (redCells.has(cell)) {
-                                    redCells.delete(cell);
-                                    resetCellLayout(cell);
-                                    layoutRedCells();
-                                }
-                            }
-                        }
-                    }
+                const areaBlock = document.getElementById('AreaBlock');
+                if (areaBlock) {
+                    const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                    solveAreaBlock(areaBlockMatrix);
                 }
             }
+        }, 10);
+    }
 
-
-            // 4. Click safe cells if all mines are already flagged
-            if (botEnabled) {
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        if (areaBlockMatrix[i][j] > 0) {
-                            const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                            if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
-                                changeStyleCellsAround(areaBlockMatrix, i, j, false);
-                                areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
-                                layoutRedCells();
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 5. Flag mines if all hidden cells must be mines
-            if (botEnabled) {
-                for (let i = 0; i < height; i++) {
-                    for (let j = 0; j < width; j++) {
-                        if (areaBlockMatrix[i][j] > 0) {
-                            const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                            if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
-                                changeStyleCellsAround(areaBlockMatrix, i, j, true);
-                                areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
-                                layoutRedCells();
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 6. Advanced deductions
-            if (botEnabled) {
-                advancedDeductions(areaBlockMatrix);
-            }
-
-            // Re-interpret the board after each round
-            areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
-
-            // Si plus aucune rouge, passer en "mode sonde"
-            if (redCells.size === 0) {
-                const candidate = findClosestClosedNonGreenCell();
-                if (candidate) {
-                    armProbeMode(candidate);
-                    return; // on laisse le click de la sonde relancer solve
-                }
-            }
-
-            count++;
-
-            await new Promise(resolve => setTimeout(resolve, 60));
+    function stopSolveInterval() {
+        if (solveInterval) {
+            clearInterval(solveInterval);
+            solveInterval = null;
         }
     }
 
