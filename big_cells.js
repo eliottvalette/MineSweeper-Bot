@@ -82,9 +82,12 @@
 
     let botEnabled = true;
     let keyWInterval = null; // intervalle pour simuler l'appui de la touche w
+    let solveInterval = null; // intervalle pour solve toutes les 500ms
 
     let probeCell = null; // cellule "sonde" quand plus aucune rouge
     const redCells = new Set();
+    
+    let lastActionCell = null; // Dernière cellule sur laquelle on a déclenché F ou C
 
     function changeStyle(el, button) {
         if (button === 0) { // cellule sûre à cliquer => ROUGE (no bomb)
@@ -123,9 +126,33 @@
         }, 1000);
     }
 
+    // Démarre l'intervalle de solve toutes les 500ms
+    function startSolveInterval() {
+        if (solveInterval) {
+            clearInterval(solveInterval);
+        }
+        solveInterval = setInterval(() => {
+            if (botEnabled) {
+                const areaBlock = document.getElementById('AreaBlock');
+                if (areaBlock) {
+                    const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                    solveAreaBlock(areaBlockMatrix);
+                }
+            }
+        }, 500);
+    }
+
+    // Arrête l'intervalle de solve
+    function stopSolveInterval() {
+        if (solveInterval) {
+            clearInterval(solveInterval);
+            solveInterval = null;
+        }
+    }
+
     // Simule l'appui de la touche "F" (flag)
     function simulateKeyF() {
-        const keyEvent = new KeyboardEvent('keydown', {
+        const keyDownEvent = new KeyboardEvent('keydown', {
             key: 'f',
             code: 'KeyF',
             keyCode: 70,
@@ -133,12 +160,36 @@
             bubbles: true,
             cancelable: true
         });
-        document.dispatchEvent(keyEvent);
+        document.dispatchEvent(keyDownEvent);
+        
+        // Simuler le relâchement de la touche immédiatement après
+        setTimeout(() => {
+            const keyUpEvent = new KeyboardEvent('keyup', {
+                key: 'f',
+                code: 'KeyF',
+                keyCode: 70,
+                which: 70,
+                bubbles: true,
+                cancelable: true
+            });
+            document.dispatchEvent(keyUpEvent);
+        }, 10);
+        
+        // Solve immédiat après F
+        setTimeout(() => {
+            if (botEnabled) {
+                const areaBlock = document.getElementById('AreaBlock');
+                if (areaBlock) {
+                    const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                    solveAreaBlock(areaBlockMatrix);
+                }
+            }
+        }, 50);
     }
 
     // Simule l'appui de la touche "C" (click - là où il n'y a pas de bombe)
     function simulateKeyC() {
-        const keyEvent = new KeyboardEvent('keydown', {
+        const keyDownEvent = new KeyboardEvent('keydown', {
             key: 'c',
             code: 'KeyC',
             keyCode: 67,
@@ -146,7 +197,31 @@
             bubbles: true,
             cancelable: true
         });
-        document.dispatchEvent(keyEvent);
+        document.dispatchEvent(keyDownEvent);
+        
+        // Simuler le relâchement de la touche immédiatement après
+        setTimeout(() => {
+            const keyUpEvent = new KeyboardEvent('keyup', {
+                key: 'c',
+                code: 'KeyC',
+                keyCode: 67,
+                which: 67,
+                bubbles: true,
+                cancelable: true
+            });
+            document.dispatchEvent(keyUpEvent);
+        }, 10);
+        
+        // Solve immédiat après C
+        setTimeout(() => {
+            if (botEnabled) {
+                const areaBlock = document.getElementById('AreaBlock');
+                if (areaBlock) {
+                    const areaBlockMatrix = interpretAreaBlock(areaBlock);
+                    solveAreaBlock(areaBlockMatrix);
+                }
+            }
+        }, 50);
     }
 
     // Initialise l'overlay d'information en haut à droite
@@ -201,8 +276,6 @@
         return overlay;
     }
 
-    let lastHoveredCell = null; // Track la dernière cellule survolée pour éviter les appels multiples
-
     // Met à jour l'overlay avec les informations de la cellule survolée
     function updateTileInfo(cell) {
         const stateElement = document.getElementById('tile-state');
@@ -217,7 +290,7 @@
             stateElement.textContent = '-';
             numberElement.textContent = '-';
             solvedElement.textContent = '-';
-            lastHoveredCell = null;
+            lastActionCell = null;
             return;
         }
 
@@ -253,21 +326,24 @@
         // Détecter si la cellule est résolue (rouge = no bomb, vert = bomb)
         if (isRed) {
             solvedElement.textContent = 'no bomb';
-            // Simuler C seulement si le bot est activé et si c'est une nouvelle cellule
-            if (botEnabled && lastHoveredCell !== cell) {
+            // Simuler C seulement si c'est une nouvelle cellule et si le bot est activé
+            if (botEnabled && lastActionCell !== cell) {
                 simulateKeyC();
-                lastHoveredCell = cell;
+                lastActionCell = cell;
             }
         } else if (isGreen) {
             solvedElement.textContent = 'bomb';
-            // Simuler F seulement si le bot est activé, si c'est une nouvelle cellule et si elle n'a pas déjà un flag
-            if (botEnabled && lastHoveredCell !== cell && !isFlagged) {
+            // Simuler F seulement si c'est une nouvelle cellule, si le bot est activé et si elle n'a pas déjà un flag
+            if (botEnabled && !isFlagged && lastActionCell !== cell) {
                 simulateKeyF();
-                lastHoveredCell = cell;
+                lastActionCell = cell;
             }
         } else {
             solvedElement.textContent = '-';
-            lastHoveredCell = null;
+            // Réinitialiser lastActionCell si on quitte une cellule rouge/verte
+            if (lastActionCell === cell) {
+                lastActionCell = null;
+            }
         }
     }
 
@@ -350,8 +426,10 @@
                     probeCell.style.zIndex = '';
                     probeCell = null;
                 }
+                // Arrêter l'intervalle de solve
                 stopSolveInterval();
             } else {
+                // Démarrer l'intervalle de solve quand le bot est activé
                 startSolveInterval();
             }
 
@@ -384,7 +462,7 @@
         }
         trySetupListeners();
 
-        // Démarrer l'intervalle de solve
+        // Démarrer l'intervalle de solve toutes les 500ms
         startSolveInterval();
     }
 
@@ -651,8 +729,6 @@
         // 6. Advanced deductions
         advancedDeductions(areaBlockMatrix);
     }
-
-    let solveInterval = null;
 
     function startSolveInterval() {
         if (solveInterval) {
