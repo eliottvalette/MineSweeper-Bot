@@ -86,18 +86,20 @@
 
     let probeCell = null; // cellule "sonde" quand plus aucune rouge
     const redCells = new Set();
-    
+
     let lastActionCell = null; // Dernière cellule sur laquelle on a déclenché F ou C
+    let clickCooldownMs = 0; // Cooldown de base entre deux clicks (en ms)
+    let lastClickTimestamp = 0; // Timestamp du dernier click simulé
 
     function changeStyle(el, button) {
         if (button === 0) { // cellule sûre à cliquer => ROUGE (no bomb)
-            el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-            el.style.border = '2px solid red';
+                el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+                el.style.border = '2px solid red';
             redCells.add(el);
         } else { // cellule à ignorer/flag => VERT (bomb)
-            el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
-            el.style.border = '2px solid green';
-            el.style.pointerEvents = 'none';
+                el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
+                el.style.border = '2px solid green';
+                el.style.pointerEvents = 'none';
             if (redCells.has(el)) {
                 redCells.delete(el);
             }
@@ -162,7 +164,7 @@
             cancelable: true,
             composed: true
         });
-        
+
         const keyUpEvent = new KeyboardEvent('keyup', {
             key: 'c',
             code: 'KeyC',
@@ -172,17 +174,17 @@
             cancelable: true,
             composed: true
         });
-        
+
         // Dispatcher sur window et document pour une meilleure compatibilité
         window.dispatchEvent(keyDownEvent);
         document.dispatchEvent(keyDownEvent);
-        
+
         // Simuler le relâchement après un court délai
         setTimeout(() => {
             window.dispatchEvent(keyUpEvent);
             document.dispatchEvent(keyUpEvent);
         }, 20);
-        
+
         // Solve immédiat après C
         setTimeout(() => {
             if (botEnabled) {
@@ -222,7 +224,7 @@
                     color: #e0e0e0 !important;
                     min-width: 200px !important;
                     box-shadow: 0 0 15px rgba(0, 0, 0, 0.7) !important;
-                    pointer-events: none !important;
+                    pointer-events: auto !important;
                 }
                 #tile-info-overlay .info-line {
                     margin: 5px 0 !important;
@@ -230,6 +232,15 @@
                 #tile-info-overlay .label {
                     font-weight: bold !important;
                     color: #4a9eff !important;
+                }
+                #click-cooldown-slider {
+                    width: 120px !important;
+                    vertical-align: middle !important;
+                    margin-left: 8px !important;
+                }
+                #click-cooldown-value {
+                    margin-left: 6px !important;
+                    font-weight: bold !important;
                 }
             `;
             document.head.appendChild(style);
@@ -242,8 +253,25 @@
             <div class="info-line"><span class="label">State:</span> <span id="tile-state">-</span></div>
             <div class="info-line"><span class="label">Number:</span> <span id="tile-number">-</span></div>
             <div class="info-line"><span class="label">Solved:</span> <span id="tile-solved">-</span></div>
+            <div class="info-line">
+                <span class="label">Cooldown:</span>
+                <input id="click-cooldown-slider" type="range" min="0" max="500" step="10" value="0" />
+                <span id="click-cooldown-value">0 ms</span>
+            </div>
         `;
         document.body.appendChild(overlay);
+
+        // Initialiser le slider de cooldown
+        const slider = document.getElementById('click-cooldown-slider');
+        const sliderValue = document.getElementById('click-cooldown-value');
+        if (slider && sliderValue) {
+            slider.addEventListener('input', () => {
+                const value = parseInt(slider.value, 10) || 0;
+                clickCooldownMs = value;
+                sliderValue.textContent = `${value} ms`;
+            });
+        }
+
         return overlay;
     }
 
@@ -297,19 +325,25 @@
         // Détecter si la cellule est résolue (rouge = no bomb, vert = bomb)
         if (isRed) {
             solvedElement.textContent = 'no bomb';
-            // Simuler C seulement si c'est une nouvelle cellule et si le bot est activé
+            // Simuler C seulement si c'est une nouvelle cellule, si le bot est activé
+            // et si le cooldown (avec jitter de ±10%) est respecté
             if (botEnabled && lastActionCell !== cell) {
-                simulateKeyC();
-                lastActionCell = cell;
+                const now = performance.now();
+                let effectiveCooldown = clickCooldownMs;
+                if (clickCooldownMs > 0) {
+                    const jitterFactor = 0.9 + Math.random() * 0.2; // entre 0.9 et 1.1
+                    effectiveCooldown = clickCooldownMs * jitterFactor;
+                }
+                if (now - lastClickTimestamp >= effectiveCooldown) {
+                    simulateKeyC();
+                    lastActionCell = cell;
+                    lastClickTimestamp = now;
+                }
             }
         } else if (isGreen) {
             solvedElement.textContent = 'bomb';
         } else {
             solvedElement.textContent = '-';
-            // Réinitialiser lastActionCell si on quitte une cellule rouge/verte
-            if (lastActionCell === cell) {
-                lastActionCell = null;
-            }
         }
     }
 
@@ -650,13 +684,13 @@
         const width = areaBlockMatrix[0].length;
 
         // 2. If Cell is opened, remove the added style for opened cells
-        for (let i = 0; i < height; i++) {
-            for (let j = 0; j < width; j++) {
-                if (areaBlockMatrix[i][j] > -1) {
-                    const cell = document.querySelector(`#cell_${j}_${i}`);
-                    if (cell) {
-                        cell.style.backgroundColor = '';
-                        cell.style.border = '';
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > -1) {
+                            const cell = document.querySelector(`#cell_${j}_${i}`);
+                            if (cell) {
+                                cell.style.backgroundColor = '';
+                                cell.style.border = '';
                         cell.style.pointerEvents = '';
                         if (redCells.has(cell)) {
                             redCells.delete(cell);
@@ -666,34 +700,34 @@
             }
         }
 
-        // 4. Click safe cells if all mines are already flagged
-        for (let i = 0; i < height; i++) {
-            for (let j = 0; j < width; j++) {
-                if (areaBlockMatrix[i][j] > 0) {
-                    const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                    if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
-                        changeStyleCellsAround(areaBlockMatrix, i, j, false);
-                        areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+            // 4. Click safe cells if all mines are already flagged
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > 0) {
+                            const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                            if (areaBlockMatrix[i][j] === minesCount && hiddenCount > 0) {
+                                changeStyleCellsAround(areaBlockMatrix, i, j, false);
+                                areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                        }
                     }
                 }
             }
-        }
 
-        // 5. Flag mines if all hidden cells must be mines
-        for (let i = 0; i < height; i++) {
-            for (let j = 0; j < width; j++) {
-                if (areaBlockMatrix[i][j] > 0) {
-                    const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
-                    if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
-                        changeStyleCellsAround(areaBlockMatrix, i, j, true);
-                        areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+            // 5. Flag mines if all hidden cells must be mines
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        if (areaBlockMatrix[i][j] > 0) {
+                            const { hiddenCount, minesCount } = countHiddenAround(areaBlockMatrix, i, j);
+                            if (areaBlockMatrix[i][j] === hiddenCount + minesCount && hiddenCount > 0) {
+                                changeStyleCellsAround(areaBlockMatrix, i, j, true);
+                                areaBlockMatrix = interpretAreaBlock(document.getElementById('AreaBlock'));
+                        }
                     }
                 }
             }
-        }
 
-        // 6. Advanced deductions
-        advancedDeductions(areaBlockMatrix);
+            // 6. Advanced deductions
+                advancedDeductions(areaBlockMatrix);
     }
 
     // Initialize interface when DOM is ready
