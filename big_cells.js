@@ -83,8 +83,10 @@
     let botEnabled = true;
 
     // Hot-spot pile pour cliquer sans déplacer la souris
-    const HOT_LEFT = 20;      // px depuis la gauche
-    const HOT_TOP  = 200;     // px depuis le haut
+    const HOT_LEFT_RED = 20;      // px depuis la gauche
+    const HOT_TOP_RED  = 200;     // px depuis le haut
+    const HOT_LEFT_GREEN = 70;      // px depuis la gauche
+    const HOT_TOP_GREEN  = 200;     // px depuis le haut
     const HOT_SIZE = 48;      // largeur/hauteur des cellules empilées
 
     const TARGET_COL = 8.5;
@@ -136,8 +138,8 @@
         // styliser la sonde (ne PAS la colorer en vert)
         probeCell = cell;
         probeCell.style.position = 'fixed';
-        probeCell.style.left = HOT_LEFT + 'px';
-        probeCell.style.top  = HOT_TOP  + 'px';
+        probeCell.style.left = HOT_LEFT_RED + 'px';
+        probeCell.style.top  = HOT_TOP_RED  + 'px';
         probeCell.style.width  = HOT_SIZE + 'px';
         probeCell.style.height = HOT_SIZE + 'px';
         probeCell.style.margin = '0';
@@ -195,8 +197,8 @@
         // Le plus petit rank sera en dessous, le plus grand au-dessus
         sorted.forEach((el, i) => {
             el.style.position = 'fixed';
-            el.style.left = HOT_LEFT + 'px';
-            el.style.top  = HOT_TOP  + 'px';
+            el.style.left = HOT_LEFT_RED + 'px';
+            el.style.top  = HOT_TOP_RED - i * 4 + 'px';
             el.style.width  = HOT_SIZE + 'px';
             el.style.height = HOT_SIZE + 'px';
             el.style.margin = '0';
