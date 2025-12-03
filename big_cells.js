@@ -82,15 +82,21 @@
 
     let botEnabled = true;
     let keyWInterval = null; // intervalle pour simuler l'appui de la touche w
+
     let probeCell = null; // cellule "sonde" quand plus aucune rouge
+    const redCells = new Set();
 
     function changeStyle(el, button) {
         if (button === 0) { // cellule sûre à cliquer => ROUGE (no bomb)
             el.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
             el.style.border = '2px solid red';
+            redCells.add(el);
         } else { // cellule à ignorer/flag => VERT (bomb)
             el.style.backgroundColor = 'rgba(0, 255, 0, 0.7)';
             el.style.border = '2px solid green';
+            if (redCells.has(el)) {
+                redCells.delete(el);
+            }
         }
     }
 
@@ -195,6 +201,8 @@
         return overlay;
     }
 
+    let lastHoveredCell = null; // Track la dernière cellule survolée pour éviter les appels multiples
+
     // Met à jour l'overlay avec les informations de la cellule survolée
     function updateTileInfo(cell) {
         const stateElement = document.getElementById('tile-state');
@@ -209,6 +217,7 @@
             stateElement.textContent = '-';
             numberElement.textContent = '-';
             solvedElement.textContent = '-';
+            lastHoveredCell = null;
             return;
         }
 
@@ -244,10 +253,21 @@
         // Détecter si la cellule est résolue (rouge = no bomb, vert = bomb)
         if (isRed) {
             solvedElement.textContent = 'no bomb';
+            // Simuler C seulement si le bot est activé et si c'est une nouvelle cellule
+            if (botEnabled && lastHoveredCell !== cell) {
+                simulateKeyC();
+                lastHoveredCell = cell;
+            }
         } else if (isGreen) {
             solvedElement.textContent = 'bomb';
+            // Simuler F seulement si le bot est activé, si c'est une nouvelle cellule et si elle n'a pas déjà un flag
+            if (botEnabled && lastHoveredCell !== cell && !isFlagged) {
+                simulateKeyF();
+                lastHoveredCell = cell;
+            }
         } else {
             solvedElement.textContent = '-';
+            lastHoveredCell = null;
         }
     }
 
@@ -256,46 +276,24 @@
         const areaBlock = document.getElementById('AreaBlock');
         if (!areaBlock) return;
 
-        // Fonction pour ajouter les listeners à une cellule
-        function addCellListeners(cell) {
-            if (cell.dataset.hoverListenerAdded) return; // Éviter les doublons
-            cell.dataset.hoverListenerAdded = 'true';
-
-            cell.addEventListener('mouseenter', () => {
+        // Utiliser la délégation d'événements pour gérer toutes les cellules (existantes et futures)
+        areaBlock.addEventListener('mouseover', (e) => {
+            const cell = e.target.closest('.cell');
+            if (cell) {
                 updateTileInfo(cell);
-            });
+            }
+        }, true);
 
-            cell.addEventListener('mouseleave', () => {
-                updateTileInfo(null);
-            });
-        }
-
-        // Ajouter les listeners aux cellules existantes
-        const existingCells = areaBlock.querySelectorAll('.cell');
-        existingCells.forEach(addCellListeners);
-
-        // Observer les nouvelles cellules ajoutées dynamiquement
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === 1) { // Element node
-                        if (node.classList && node.classList.contains('cell')) {
-                            addCellListeners(node);
-                        }
-                        // Vérifier aussi les enfants
-                        const childCells = node.querySelectorAll && node.querySelectorAll('.cell');
-                        if (childCells) {
-                            childCells.forEach(addCellListeners);
-                        }
-                    }
-                });
-            });
-        });
-
-        observer.observe(areaBlock, {
-            childList: true,
-            subtree: true
-        });
+        areaBlock.addEventListener('mouseout', (e) => {
+            const cell = e.target.closest('.cell');
+            if (cell) {
+                const relatedTarget = e.relatedTarget;
+                // Si on sort vraiment de la cellule (pas juste vers un enfant)
+                if (!relatedTarget || !relatedTarget.closest || !relatedTarget.closest('.cell')) {
+                    updateTileInfo(null);
+                }
+            }
+        }, true);
     }
 
     function initializeInterface() {
